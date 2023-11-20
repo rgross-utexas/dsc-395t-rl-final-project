@@ -1,1 +1,4 @@
-# dsc-395t-rl-final-project
+# Reinforcement Learning Side Projects
+
+## Current Projects
+- Yahtzee
