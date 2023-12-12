@@ -1,0 +1,12 @@
+name: rl-an-intro
+channels:
+  - pytorch
+  - defaults
+dependencies:
+  - python=3.11
+  - pillow
+  - matplotlib
+  - numpy
+  - pytorch
+  - torchvision
+  - tensorboard
