@@ -7,10 +7,12 @@ import numpy as np
 
 class Arm:
 
-    def __init__(self, mean, std, num_steps):
+    def __init__(self, mean, std, num_steps, initial_value = None):
         self.mean = mean
         self.std = std
         self.data = np.random.normal(mean, std, num_steps)
+        if initial_value is not None:
+            self.data[0] = initial_value
 
     def __str__(self):
         return f'{self.mean=}, {self.std=}, data_mean={np.average(self.data)}, data_std={np.std(self.data)}'
@@ -27,6 +29,8 @@ def main(args) -> None:
     num_steps = args.num_steps
     num_runs = args.num_runs
     epsilons = args.epsilons
+    initial_value = args.initial_value
+    alpha = args.alpha
     output_filename = args.output_filename
 
     data = {}
@@ -37,10 +41,6 @@ def main(args) -> None:
         o_avg = np.zeros(num_steps, dtype=float)
         r_avg = np.zeros(num_steps, dtype=float)
 
-        # track this over each run
-        q_run = np.zeros(num_arms, dtype=float)
-        n_run = np.zeros(num_arms, dtype=int)
-
         # save the averages for each epsilon
         data[epsilon] = {'r': r_avg, 'o': o_avg}
 
@@ -48,11 +48,18 @@ def main(args) -> None:
 
             print(f"Starting {run=}...")
 
+            # track this over each run
+            if initial_value is not None:
+                q_run = np.array([initial_value] * num_arms, dtype=float)
+            else:
+                q_run = np.zeros(num_arms, dtype=float)
+            n_run = np.zeros(num_arms, dtype=int)
+
             # create the arms
             arm_means = np.random.normal(mean, std, num_arms)
             arms = []
             for arm_mean in arm_means:
-                arm = Arm(arm_mean, std, num_steps)
+                arm = Arm(arm_mean, std, num_steps, initial_value)
                 arms.append(arm)
 
             # track the optimal action
@@ -61,8 +68,11 @@ def main(args) -> None:
             for step in range(num_steps):
 
                 # select the arm, possibly at random based on epsilon
-                if np.random.uniform(0, 1) > epsilon:
-                    action = np.random.choice(np.flatnonzero(q_run == q_run.max()))
+                e = np.random.uniform(0, 1)
+                if e > epsilon:
+                    q_run_max = q_run.max()
+                    choice = np.flatnonzero(q_run == q_run_max)
+                    action = np.random.choice(choice)
                 else:
                     action = np.random.randint(0, num_arms)
 
@@ -74,11 +84,7 @@ def main(args) -> None:
                 r_avg[step] = r_avg[step] + (r - r_avg[step]) / run
 
                 n_run[action] += 1
-                q_run[action] = q_run[action] + (r - q_run[action]) / n_run[action]
-
-            # re-initialize to zeros
-            q_run.fill(0)
-            n_run.fill(0)
+                q_run[action] = q_run[action] + alpha * (r - q_run[action])
 
     render_figure(data, output_filename)
 
@@ -114,6 +120,8 @@ if __name__ == '__main__':
     parser.add_argument('--num_steps', type=int, default=1000)
     parser.add_argument('--num_runs', type=int, default=2000)
     parser.add_argument('--epsilons', nargs='*', default=[1.0, .1, .05, .01, 0.0])
-    parser.add_argument('--output_filename', type=str, default='k-armed-testbed.png')
+    parser.add_argument('--initial_value', type=float, default=5)
+    parser.add_argument('--alpha', type=float, default=.1)
+    parser.add_argument('--output_filename', type=str, default='k-armed-testbed-non-stat-1000-500-5.png')
 
     main(args=parser.parse_args())
