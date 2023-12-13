@@ -111,9 +111,9 @@ if __name__ == '__main__':
     parser.add_argument('--num_arms', type=int, default=10)
     parser.add_argument('--mean', type=float, default=0.0)
     parser.add_argument('--std', type=float, default=1.0)
-    parser.add_argument('--num_steps', type=int, default=1000)
+    parser.add_argument('--num_steps', type=int, default=10000)
     parser.add_argument('--num_runs', type=int, default=2000)
-    parser.add_argument('--epsilons', nargs='*', default=[1.0, .1, .05, .01, 0.0])
+    parser.add_argument('--epsilons', nargs='*', default=[.1, .05, .01, 0.0])
     parser.add_argument('--output_filename', type=str, default='k-armed-testbed.png')
 
     main(args=parser.parse_args())
