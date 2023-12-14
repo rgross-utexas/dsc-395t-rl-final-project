@@ -1,5 +1,5 @@
 import argparse
-from typing import Dict
+from typing import Dict, Optional
 
 from matplotlib import pyplot as plt
 import numpy as np
@@ -18,18 +18,27 @@ class Arm:
 
 def main(args) -> None:
 
+    args = vars(args)
     print(f'{args=}')
 
-    # get all the args
-    num_arms = args.num_arms
-    mean = args.mean
-    std = args.std
-    num_steps = args.num_steps
-    num_runs = args.num_runs
-    epsilons = args.epsilons
-    output_filename = args.output_filename
+    data = do_run(args)
+
+    render_figure(data, args.get('output_filename'))
+
+
+def do_run(args: Dict) -> Dict:
 
     data = {}
+
+    num_arms = args.get('num_arms')
+    mean = args.get('mean')
+    std = args.get('std')
+    num_steps = args.get('num_steps')
+    num_runs = args.get('num_runs')
+    epsilons = args.get('epsilons')
+    initial_value = args.get('initial_value')
+    alpha = args.get('alpha')
+    run_type = args.get('run_type')
 
     for epsilon in epsilons:
 
@@ -37,16 +46,16 @@ def main(args) -> None:
         o_avg = np.zeros(num_steps, dtype=float)
         r_avg = np.zeros(num_steps, dtype=float)
 
-        # track this over each run
-        q_run = np.zeros(num_arms, dtype=float)
-        n_run = np.zeros(num_arms, dtype=int)
-
         # save the averages for each epsilon
         data[epsilon] = {'r': r_avg, 'o': o_avg}
 
         for run in range(1, num_runs + 1):
 
             print(f"Starting {run=}...")
+
+            # track this over each run
+            q_run = np.array([initial_value] * num_arms, dtype=float)
+            n_run = np.zeros(num_arms, dtype=int)
 
             # create the arms
             arm_means = np.random.normal(mean, std, num_arms)
@@ -61,10 +70,16 @@ def main(args) -> None:
             for step in range(num_steps):
 
                 # select the arm, possibly at random based on epsilon
-                if np.random.uniform(0, 1) > epsilon:
-                    action = np.random.choice(np.flatnonzero(q_run == q_run.max()))
+                e = np.random.uniform(0, 1)
+                if e > epsilon:
+                    q_run_max = q_run.max()
+                    choice = np.flatnonzero(q_run == q_run_max)
+                    action = np.random.choice(choice)
                 else:
                     action = np.random.randint(0, num_arms)
+
+                # track which action was taken
+                n_run[action] += 1
 
                 # track optimal actions
                 o_avg[step] = o_avg[step] + ((action == optimal_action) - o_avg[step]) / run
@@ -73,14 +88,13 @@ def main(args) -> None:
                 r = arms[action].data[step]
                 r_avg[step] = r_avg[step] + (r - r_avg[step]) / run
 
-                n_run[action] += 1
-                q_run[action] = q_run[action] + (r - q_run[action]) / n_run[action]
+                # choose which update rule here
+                if run_type == 'stationary':
+                    q_run[action] = q_run[action] + alpha * (r - q_run[action])
+                else:
+                    q_run[action] = q_run[action] + (r - q_run[action]) / n_run[action]
 
-            # re-initialize to zeros
-            q_run.fill(0)
-            n_run.fill(0)
-
-    render_figure(data, output_filename)
+    return data
 
 
 def render_figure(data: Dict, output_filename: str):
@@ -111,9 +125,16 @@ if __name__ == '__main__':
     parser.add_argument('--num_arms', type=int, default=10)
     parser.add_argument('--mean', type=float, default=0.0)
     parser.add_argument('--std', type=float, default=1.0)
-    parser.add_argument('--num_steps', type=int, default=10000)
+    parser.add_argument('--num_steps', type=int, default=2000)
     parser.add_argument('--num_runs', type=int, default=2000)
-    parser.add_argument('--epsilons', nargs='*', default=[.1, .05, .01, 0.0])
-    parser.add_argument('--output_filename', type=str, default='k-armed-testbed.png')
+    parser.add_argument('--epsilons', nargs='*',
+                        default=[.1, .05, .01, 0.0])
+    parser.add_argument('--initial_value', type=float, default=0)
+    parser.add_argument('--alpha', type=float, default=.1)
+    parser.add_argument('--run_type',
+                        choices=['default', 'stationary'],
+                        default='default')
+    parser.add_argument('--output_filename', type=str,
+                        default='k-armed-testbed-stat.png')
 
     main(args=parser.parse_args())
