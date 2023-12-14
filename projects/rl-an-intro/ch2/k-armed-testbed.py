@@ -155,6 +155,6 @@ if __name__ == '__main__':
                         default='e_greedy')
     parser.add_argument('--ucb_consts', nargs='*', default=[1, 2, 5, 10])
     parser.add_argument('--output_filename', type=str,
-                        default='k-armed-testbed-stat.png')
+                        default='images/k-armed-testbed-stat.png')
 
     main(args=parser.parse_args())
