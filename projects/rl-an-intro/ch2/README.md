@@ -9,7 +9,7 @@
 - averages over 2000 runs
 - 1000 steps
 
-![](k-armed-testbed-stat.png "K-armed Testbed, Basic")
+![](images/k-armed-testbed-stat.png "K-armed Testbed, Basic")
 
 - 10 arms
 - $\epsilon$-greedy values: .1, .05, .01, 0
@@ -18,11 +18,11 @@
 - optimistic initial value of 5
 - non-stationary update rule
 
-![](k-armed-testbed-opt-init-non-stat.png "K-armed Testbed, Optimistic Initial Values")
+![](images/k-armed-testbed-opt-init-non-stat.png "K-armed Testbed, Optimistic Initial Values")
 
 - 10 arms
 - UCB constant values: 1, 2, 5, 10
 - averages over 2000 runs
 - 1000 steps
 
-![](k-armed-testbed-ucb.png "K-armed Testbed, Upper-Confidence-Bound")
+![](images/k-armed-testbed-ucb.png "K-armed Testbed, Upper-Confidence-Bound")
