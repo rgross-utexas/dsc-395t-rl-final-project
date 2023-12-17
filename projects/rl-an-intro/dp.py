@@ -147,13 +147,13 @@ if __name__ == "__main__":
     eval_policy = pi_star
 
     # first do value prediction using the optimal policy from the previous value iteration
-    v1, q1 = value_prediction(env_with_model, eval_policy, np.zeros(env.spec.num_states), 1e-4)
-    print(f'State value prediction from optimal policy: {v1}')
-    print(f'Action-state value prediction from the optimal policy: {q1}')
+    v, q = value_prediction(env_with_model, eval_policy, np.zeros(env.spec.num_states), 1e-4)
+    print(f'State value prediction from optimal policy: {v}')
+    print(f'Action-state value prediction from the optimal policy: {q}')
 
     behavior_policy = RandomPolicy(env.spec.num_actions)
 
     # now do value prediction using an equiprobable random policy
-    v2, q2 = value_prediction(env_with_model, behavior_policy, np.zeros(env.spec.num_states), 1e-4)
-    print(f'State value prediction from optimal policy: {v2}')
-    print(f'Action-state value prediction from the optimal policy: {q2}')
+    v, q = value_prediction(env_with_model, behavior_policy, np.zeros(env.spec.num_states), 1e-4)
+    print(f'State value prediction from an equiprobable random policy: {v}')
+    print(f'Action-state value prediction from an equiprobable random policy: {q}')
