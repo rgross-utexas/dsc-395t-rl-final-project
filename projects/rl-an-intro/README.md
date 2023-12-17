@@ -1,4 +1,9 @@
-## Chapter 2
+# Reinforcement Learning: An Introduction
+
+These are notes and results from implementations of various examples
+and algorithms from throughout the book.
+
+## Chapter 2: Multi-armed Bandits
 
 ### K-armed Bandit Testbed Implementation
 
@@ -27,7 +32,7 @@
 
 ![](images/k-armed-testbed-ucb.png "K-armed Testbed, Upper-Confidence-Bound")
 
-## Chapter 4
+## Chapter 4: Dynamic Programming
 
 $p_\star$ for $4\times4$ deterministic GridWorld MDP:
 
