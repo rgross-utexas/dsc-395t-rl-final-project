@@ -29,7 +29,7 @@
 
 ## Chapter 4
 
-$p_\star$ for $4x4$ deterministic GridWorld MDP:
+$p_\star$ for $4\times4$ deterministic GridWorld MDP:
 
 ```
 [ F 0 0 0
