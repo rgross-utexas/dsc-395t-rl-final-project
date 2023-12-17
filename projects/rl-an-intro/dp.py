@@ -8,20 +8,20 @@ from utils.policy import Policy, DeterministicPolicy, RandomPolicy
 
 
 def value_prediction(e: EnvWithModel, pi: Policy,
-                     init_v: np.array, theta: float) -> Tuple[np.array, np.array]:
+                     v_init: np.array, theta: float) -> Tuple[np.array, np.array]:
     """
     input:
         e: environment with model information
         pi: policy
-        init_v: initial v(s); numpy array shape of [nS,]
+        v_init: initial v(s); numpy array shape of [nS,]
         theta: exit criteria
     return:
         predicted state values
         predicted state-action values
     """
 
-    v_final = init_v.copy()
-    q_final = np.zeros((e.spec.num_states, e.spec.num_actions))
+    v_final = v_init.copy()
+    q_final = np.zeros_like(v_init)
 
     while True:
         delta = 0
@@ -71,19 +71,19 @@ def value_prediction(e: EnvWithModel, pi: Policy,
     return v_final, q_final
 
 
-def value_iteration(e: EnvWithModel, init_v: np.array, theta: float) -> Tuple[np.array, Policy]:
+def value_iteration(e: EnvWithModel, v_init: np.array, theta: float) -> Tuple[np.array, Policy]:
     """
     input:
         e: environment with model information
-        init_v: initial v_copy(s); numpy array shape of [num_states,]
+        v_init: initial v_copy(s); numpy array shape of [num_states,]
         theta: exit criteria
     return:
         value: optimal value function; numpy array shape of [num_states]
         policy: optimal deterministic policy; instance of Policy class
     """
 
-    v_final = init_v.copy()
-    p = np.zeros(e.spec.num_states)
+    v_final = v_init.copy()
+    p = np.zeros_like(v_final)
 
     while True:
         delta = 0
