@@ -123,7 +123,7 @@ Every visit state value prediction using an equiprobable random policy with 1000
  -21.88796227 -19.92882583 -13.8152689    0.]
 ```
 
-Policy iteration ($\pi_\star$) with exploring starts from an equiprobable random policy with 100000 trajectories/episodes
+Policy iteration ($\pi \approx \pi_\star$) with exploring starts from an equiprobable random policy with 100000 trajectories/episodes
 
 ```
 [0 0 0 3
