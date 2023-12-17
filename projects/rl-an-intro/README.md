@@ -75,7 +75,7 @@ State value prediction using an equiprobable random policy:
 [  0.         -13.99893866 -19.99842728 -21.99824003
  -13.99893866 -17.99861452 -19.9984378  -19.99842728
  -19.99842728 -19.9984378  -17.99861452 -13.99893866
- -21.99824003 -19.99842728 -13.99893866   0.]
+ -21.99824003 -19.99842728 -13.99893866   0.        ]
  ```
 
 State-action value prediction using an equiprobable random policy:
