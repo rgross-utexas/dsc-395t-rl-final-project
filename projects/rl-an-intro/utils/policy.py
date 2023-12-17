@@ -20,25 +20,37 @@ class Policy(object):
         """
         raise NotImplementedError()
 
+    @property
+    def p(self) -> np.array:
+        raise NotImplementedError()
+
 
 class RandomPolicy(Policy):
     def __init__(self, nA, p=None):
-        self.p = p if p is not None else np.array([1 / nA] * nA)
+        self._p = p if p is not None else np.array([1 / nA] * nA)
 
     def action_prob(self, state, action=None):
         return self.p[action]
 
     def action(self, state):
-        return np.random.choice(len(self.p), p=self.p)
+        return np.random.choice(len(self._p), p=self._p)
+
+    @property
+    def p(self) -> np.array:
+        return self._p
 
 
 class DeterministicPolicy(Policy):
 
     def __init__(self, p: np.array):
-        self.p = p
+        self._p = p
 
     def action_prob(self, state, action):
-        return 1 if self.p[state] == action else 0
+        return 1 if self._p[state] == action else 0
 
     def action(self, state):
-        return self.p[state]
+        return self._p[state]
+
+    @property
+    def p(self) -> np.array:
+        return self._p
