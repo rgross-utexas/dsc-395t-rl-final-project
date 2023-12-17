@@ -34,13 +34,13 @@ and algorithms from throughout the book.
 
 ## Chapter 4: Dynamic Programming
 
-$p_\star$ for $4\times4$ deterministic GridWorld MDP:
+$\pi_\star$ for $4\times4$ deterministic GridWorld MDP:
 
 ```
-[ F 0 0 0
+[ 0 0 0 0
   1 0 0 3
   1 0 2 3
-  1 2 2 F]
+  1 2 2 0]
 ```
 
 State value prediction using $p_\star$ (above):
@@ -123,7 +123,38 @@ Every visit state value prediction using an equiprobable random policy with 1000
  -21.88796227 -19.92882583 -13.8152689    0.]
 ```
 
+Policy iteration ($\pi_\star$) with exploring starts from an equiprobable random policy with 100000 trajectories/episodes
+
+```
+[0 0 0 3
+ 1 0 3 3
+ 1 2 2 3
+ 1 2 2 0]
+ ```
+
+On-policy state-action value prediction with exploring starts from an equiprobable random policy with 100000 trajectories/episodes
+
+```
+[[  0.           0.           0.           0.        ]
+ [ -1.         -14.78654229 -21.02331045 -18.99832389]
+ [-14.888272   -21.01292305 -22.93211709 -21.19819901]
+ [-20.97189294 -22.83740889 -22.77129636 -20.88062269]
+ [-15.02362072  -1.         -18.96773724 -21.05037401]
+ [-14.88742304 -15.03271226 -21.06039434 -21.03715862]
+ [-19.04281462 -21.00959366 -21.18797805 -19.04468586]
+ [-21.08256389 -22.91684219 -21.00897127 -15.0288286 ]
+ [-21.28437903 -15.05760307 -21.07756962 -23.11239939]
+ [-21.13327091 -19.01649633 -19.07661973 -21.12922396]
+ [-20.98453251 -21.03514459 -15.18223422 -15.23848945]
+ [-19.19881265 -20.94675381 -14.99930598  -1.        ]
+ [-22.94921231 -21.09683225 -20.99841692 -22.88845156]
+ [-22.9758971  -21.21682513 -15.01800612 -20.92207382]
+ [-21.00239041 -19.25709616  -1.         -15.12323233]
+ [  0.           0.           0.           0.        ]]
+```
+
 On-policy action-state value prediction with ordinary importance sampling from an equiprobable random policy with 100000 trajectories/episodes:
+
 ```
 [[  0.           0.           0.           0.        ]
  [ -1.         -14.93732002 -20.65596439 -18.98024023]

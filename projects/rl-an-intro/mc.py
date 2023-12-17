@@ -89,6 +89,51 @@ def every_visit_prediction(
     return v_final
 
 
+def exploring_starts_policy_iteration(
+        env_spec: EnvSpec,
+        trajs: Iterable[Iterable[Tuple[int, int, int, int]]],
+        q_init: np.array
+) -> np.array:
+    """
+    input:
+        env_spec: environment spec
+        trajs: N trajectories generated using
+            list in which each element is a tuple representing (s_t,a_t,r_{t+1},s_{t+1})
+        bpi: behavior policy used to generate trajectories
+        pi: evaluation target policy
+        q_init: initial Q values; np array shape of [num_states,num_actions]
+    ret:
+        policy: optimal deterministic policy; instance of Policy class
+        q_final: $q_pi$ function; numpy array shape of [num_states,num_actions]
+    """
+
+    q_final = q_init.copy()
+
+    # maintain a count of state-action pairs
+    c = np.zeros_like(q_init, dtype=float)
+
+    # policy that we are iterating over
+    p = np.zeros(env.spec.num_states)
+
+    for traj in trajs:
+
+        g = 0.
+        q_copy = q_final.copy()
+
+        # we iterate backwards over the trajectory, so reverse it
+        for s_t, a_t, r_t1, _ in reversed(traj):
+            g = env_spec.gamma * g + r_t1
+            c[s_t, a_t] += 1.
+            q_copy[s_t, a_t] += (g - q_final[s_t, a_t]) / c[s_t, a_t]
+            p[s_t] = np.argmax(q_copy[s_t])
+
+        q_final = q_copy
+
+    policy = DeterministicPolicy(p)
+
+    return policy, q_final
+
+
 def ordinary_importance_sampling_prediction(
         env_spec: EnvSpec,
         trajs: Iterable[Iterable[Tuple[int, int, int, int]]],
@@ -208,7 +253,13 @@ if __name__ == "__main__":
     print(f'Every visit state value prediction using an equiprobable random policy with {num_trajectories} '
           f'trajectories/episodes: {v_ev}')
 
-    # on-policy evaluation test
+    p_star, q = exploring_starts_policy_iteration(env.spec, trajs,
+                                                  np.zeros((env.spec.num_states, env.spec.num_actions)))
+
+    print(f'pi*: {p_star.p.astype(int)}')
+    print(f'q: {q}')
+
+    # on-policy evaluation
     q_ois = ordinary_importance_sampling_prediction(env.spec, trajs, behavior_policy, behavior_policy,
                                                     np.zeros((env.spec.num_states, env.spec.num_actions)))
     print(f'On-policy action-state value prediction with ordinary importance sampling from an equiprobable random '
@@ -223,7 +274,7 @@ if __name__ == "__main__":
     p = np.array([0, 0, 0, 0, 1, 0, 0, 3, 1, 0, 2, 3, 1, 2, 2])
     eval_policy = DeterministicPolicy(p)
 
-    # off-policy evaluation test
+    # off-policy evaluation
     q_ois = ordinary_importance_sampling_prediction(env.spec, trajs, behavior_policy, eval_policy,
                                                     np.zeros((env.spec.num_states, env.spec.num_actions)))
     print(f'Off-policy action-state value prediction with ordinary importance sampling from an optimal '
