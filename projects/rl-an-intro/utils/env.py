@@ -6,20 +6,20 @@ Much of this helper/utility code comes from my RL class in the MSDS at UT, Austi
 
 
 class EnvSpec(object):
-    def __init__(self, nS, nA, gamma):
-        self._nS = nS
-        self._nA = nA
+    def __init__(self, num_states, num_actions, gamma):
+        self._num_states = num_states
+        self._num_actions = num_actions
         self._gamma = gamma
 
     @property
-    def nS(self) -> int:
+    def num_states(self) -> int:
         """ # of possible states """
-        return self._nS
+        return self._num_states
 
     @property
-    def nA(self) -> int:
+    def num_actions(self) -> int:
         """ # of possible actions """
-        return self._nA
+        return self._num_actions
 
     @property
     def gamma(self) -> float:
@@ -54,19 +54,19 @@ class Env(object):
 
 class EnvWithModel(Env):
     @property
-    def TD(self) -> np.array:
+    def td(self) -> np.array:
         """
         Transition Dynamics
-        return: a numpy array shape of [nS,nA,nS]
-            TD[s,a,s'] := the probability it will resulted in s' when it execute action a given state s
+        return: a numpy array shape of [num_states,num_actions,num_states]
+            TD[s,a,s'] := the probability it will result in s' when it executes action a given state s
         """
         raise NotImplementedError()
 
     @property
-    def R(self) -> np.array:
+    def r(self) -> np.array:
         """
         Reward function
-        return: a numpy array shape of [nS,nA,nS]
+        return: a numpy array shape of [num_states,num_actions,num_states]
             R[s,a,s'] := reward the agent will get it experiences (s,a,s') transition.
         """
         raise NotImplementedError()

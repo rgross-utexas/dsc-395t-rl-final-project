@@ -1,6 +1,6 @@
 import numpy as np
 
-from env import Env, EnvSpec, EnvWithModel
+from .env import Env, EnvSpec, EnvWithModel
 
 
 class ActionConstants(object):
@@ -31,11 +31,11 @@ class GridWorldMDP(Env):
 
     def step(self, action):
 
-        assert action in list(range(self.spec.nA)), "Invalid Action"
+        assert action in list(range(self.spec.num_actions)), "Invalid Action"
         assert self._state != self.final_state, "Episode has ended!"
 
         prev_state = self._state
-        self._state = np.random.choice(self.spec.nS, p=self.trans_mat[self._state, action])
+        self._state = np.random.choice(self.spec.num_states, p=self.trans_mat[self._state, action])
         r = self.r_mat[prev_state, action, self._state]
 
         return self._state, r, self._state == self.final_state
@@ -58,6 +58,26 @@ class GridWorldMDP(Env):
 
 class GeneralGridWorldMDP(Env):
 
+    """
+    2x2:
+    +---+---+
+    | F | 1 |
+    +---+---+
+    | 2 | F |
+    +---+---+
+
+    4x4:
+    +---+---+---+---+
+    | F | 1 | 2 | 3 |
+    +---+---+---+---+
+    | 4 | 5 | 6 | 7 |
+    +---+---+---+---+
+    | 8 | 9 | 10| 11|
+    +---+---+---+---+
+    | 12| 13| 14| F |
+    +---+---+---+---+
+    """
+
     def __init__(self, width: int, height: int):
 
         num_states = width * height - 1
@@ -78,11 +98,11 @@ class GeneralGridWorldMDP(Env):
 
     def step(self, action):
 
-        assert action in list(range(self.spec.nA)), "Invalid Action"
+        assert action in list(range(self.spec.num_actions)), "Invalid Action"
         assert self._state != self.final_state, "Episode has ended!"
 
         prev_state = self._state
-        self._state = np.random.choice(self.spec.nS, p=self.trans_mat[self._state, action])
+        self._state = np.random.choice(self.spec.num_states, p=self.trans_mat[self._state, action])
         r = self.r_mat[prev_state, action, self._state]
 
         return self._state, r, self._state == self.final_state
@@ -145,6 +165,20 @@ class GeneralGridWorldMDP(Env):
         return trans_mat
 
 
+class GeneralGridWorldMDPWithModel(GeneralGridWorldMDP, EnvWithModel):
+
+    def __init__(self, width: int, height: int):
+        super().__init__(width, height)
+
+    @property
+    def td(self) -> np.array:
+        return self.trans_mat
+
+    @property
+    def r(self) -> np.array:
+        return self.r_mat
+
+
 class ThreeStateGridWorldMDP(GridWorldMDP):  # MDP introduced at Fig 5.4 in Sutton Book
 
     num_states = 3
@@ -186,11 +220,11 @@ class ThreeStateGridWorldMDP(GridWorldMDP):  # MDP introduced at Fig 5.4 in Sutt
 
 class ThreeStateGridWorldMDPWithModel(ThreeStateGridWorldMDP, EnvWithModel):
     @property
-    def TD(self) -> np.array:
+    def td(self) -> np.array:
         return self.trans_mat
 
     @property
-    def R(self) -> np.array:
+    def r(self) -> np.array:
         return self.r_mat
 
 
@@ -311,11 +345,11 @@ class FifteenStateGridWorldMDP(GridWorldMDP):  # MDP introduced at Fig 5.4 in Su
 
 class FifteenStateGridWorldMDPWithModel(FifteenStateGridWorldMDP, EnvWithModel):
     @property
-    def TD(self) -> np.array:
+    def td(self) -> np.array:
         return self.trans_mat
 
     @property
-    def R(self) -> np.array:
+    def r(self) -> np.array:
         return self.r_mat
 
 
