@@ -69,7 +69,7 @@ State-action value prediction using $p_\star$ (above):
 ```
 
 
-State value prediction from using a equiprobable random policy:
+State value prediction using an equiprobable random policy:
 
 ```
 [  0.         -13.99893866 -19.99842728 -21.99824003
@@ -78,7 +78,7 @@ State value prediction from using a equiprobable random policy:
  -21.99824003 -19.99842728 -13.99893866   0.]
  ```
 
-State-action value prediction from using a equiprobable random policy:
+State-action value prediction using an equiprobable random policy:
 
 ```
 [[  0.           0.           0.           0.        ]
