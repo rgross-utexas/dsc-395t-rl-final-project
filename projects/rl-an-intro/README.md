@@ -108,17 +108,19 @@ State-action value prediction using an equiprobable random policy:
 First visit state value prediction using an equiprobable random policy with 100000 trajectories/episodes:
 
 ```
-[  0.          -4.89446992  -8.28628159 -10.41292918  -4.90394671
-  -6.45359771  -7.67281568  -8.25182539  -8.22930065  -7.65805575
-  -6.49836474  -4.92075885 -10.42069993  -8.08775559  -4.86703613]
+[  0.          -4.89446992  -8.28628159 -10.41292918
+  -4.90394671  -6.45359771  -7.67281568  -8.25182539
+  -8.22930065  -7.65805575  -6.49836474  -4.92075885
+  -10.42069993  -8.08775559  -4.86703613  0.]
 ```
 
 Every visit state value prediction using an equiprobable random policy with 100000 trajectories/episodes:
 
 ```
-[  0.         -13.89942518 -19.84722623 -21.8641906  -13.99492976
- -17.95387222 -19.86638925 -19.79371526 -19.80255672 -19.91403795
- -17.90539881 -13.91110278 -21.88796227 -19.92882583 -13.8152689 ]
+[  0.         -13.89942518 -19.84722623 -21.8641906
+ -13.99492976 -17.95387222 -19.86638925 -19.79371526
+ -19.80255672 -19.91403795 -17.90539881 -13.91110278
+ -21.88796227 -19.92882583 -13.8152689    0.]
 ```
 
 On-policy action-state value prediction with ordinary importance sampling from an equiprobable random policy with 100000 trajectories/episodes:
