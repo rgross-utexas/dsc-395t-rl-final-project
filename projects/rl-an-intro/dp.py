@@ -21,7 +21,7 @@ def value_prediction(e: EnvWithModel, pi: Policy,
     """
 
     v_final = v_init.copy()
-    q_final = np.zeros_like(v_init)
+    q_final = np.zeros((e.spec.num_states, e.spec.num_actions))
 
     while True:
         delta = 0
