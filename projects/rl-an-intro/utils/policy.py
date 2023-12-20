@@ -26,8 +26,8 @@ class Policy(object):
 
 
 class RandomPolicy(Policy):
-    def __init__(self, nA, p=None):
-        self._p = p if p is not None else np.array([1 / nA] * nA)
+    def __init__(self, num_actions, p=None):
+        self._p = p if p is not None else np.array([1 / num_actions] * num_actions)
 
     def action_prob(self, state, action=None):
         return self.p[action]

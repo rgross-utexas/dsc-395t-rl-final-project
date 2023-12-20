@@ -53,7 +53,7 @@ class GridWorldMDP(Env):
         return r_mat
 
 
-class GeneralDeterministicGridWorldMDP(Env):
+class GeneralGridWorldMDP(Env):
     """
     A
     2x2:
@@ -76,7 +76,6 @@ class GeneralDeterministicGridWorldMDP(Env):
     """
 
     def __init__(self, width: int, height: int):
-
         num_states = width * height - 1
 
         assert num_states > 0, "width * height - 1 must be greater than 0!"
@@ -97,7 +96,6 @@ class GeneralDeterministicGridWorldMDP(Env):
         return self._state
 
     def step(self, action):
-
         assert action in list(range(self.spec.num_actions)), "Invalid Action"
         assert self._state != self._final_state, "Episode has ended!"
 
@@ -106,6 +104,18 @@ class GeneralDeterministicGridWorldMDP(Env):
         r = self._r[prev_state, action, self._state]
 
         return self._state, r, self._state == self._final_state
+
+    def _build_r_mat(self) -> np.array:
+        raise NotImplementedError("_build_r_mat not implemented!")
+
+    def _build_trans_mat(self) -> np.array:
+        raise NotImplementedError("_build_trans_mat not implemented!")
+
+
+class GeneralDeterministicGridWorldMDP(GeneralGridWorldMDP):
+
+    def __init__(self, width: int, height: int):
+        super().__init__(width, height)
 
     def _build_r_mat(self) -> np.array:
 
@@ -177,3 +187,54 @@ class GeneralDeterministicGridWorldMDPWithModel(GeneralDeterministicGridWorldMDP
     @property
     def r(self) -> np.array:
         return self._r
+
+
+class OneStateRandomMDP(Env):
+
+    def __init__(self):
+
+        num_states = 2
+        num_actions = 2
+
+        env_spec = EnvSpec(num_states, num_actions, 1.)
+
+        super().__init__(env_spec)
+        self._num_states = num_states
+        self._num_actions = num_actions
+        self._state = None
+        self._final_state = 1
+        self._td = self._build_trans_mat()
+        self._r = self._build_r_mat()
+
+    def reset(self):
+        self._state = 0
+        return self._state
+
+    def step(self, action):
+
+        assert action in list(range(self.spec.num_actions)), "Invalid action"
+        assert self._state != self._final_state, "Episode has ended!"
+
+        prev_state = self._state
+        self._state = np.random.choice(self.spec.num_states, p=self._td[self._state, action])
+        r = self._r[prev_state, action, self._state]
+
+        return self._state, r, self._state == self._final_state
+
+    def _build_r_mat(self) -> np.array:
+        r_mat = np.zeros((self._num_states, self._num_actions, self._num_states))
+        r_mat[0, 0, 1] = 1.
+
+        return r_mat
+
+    def _build_trans_mat(self) -> np.array:
+
+        trans_mat = np.zeros((self._num_states, self._num_actions, self._num_states))
+
+        trans_mat[0, 0, 0] = 0.9
+        trans_mat[0, 0, 1] = 0.1
+        trans_mat[0, 1, 0] = 0.
+        trans_mat[0, 1, 1] = 1.0
+        trans_mat[1, :, 1] = 1.
+
+        return trans_mat

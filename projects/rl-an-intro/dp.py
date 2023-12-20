@@ -8,19 +8,19 @@ from utils.policy import Policy, DeterministicPolicy, RandomPolicy
 
 
 def value_prediction(e: EnvWithModel, pi: Policy,
-                     init_v: np.array, theta: float) -> Tuple[np.array, np.array]:
+                     v_init: np.array, theta: float) -> Tuple[np.array, np.array]:
     """
     input:
         e: environment with model information
         pi: policy
-        init_v: initial v(s); numpy array shape of [nS,]
+        v_init: initial v(s); numpy array shape of [nS,]
         theta: exit criteria
     return:
         predicted state values
         predicted state-action values
     """
 
-    v_final = init_v.copy()
+    v_final = v_init.copy()
     q_final = np.zeros((e.spec.num_states, e.spec.num_actions))
 
     while True:
@@ -71,19 +71,19 @@ def value_prediction(e: EnvWithModel, pi: Policy,
     return v_final, q_final
 
 
-def value_iteration(e: EnvWithModel, init_v: np.array, theta: float) -> Tuple[np.array, Policy]:
+def value_iteration(e: EnvWithModel, v_init: np.array, theta: float) -> Tuple[np.array, Policy]:
     """
     input:
         e: environment with model information
-        init_v: initial v_copy(s); numpy array shape of [num_states,]
+        v_init: initial v_copy(s); numpy array shape of [num_states,]
         theta: exit criteria
     return:
         value: optimal value function; numpy array shape of [num_states]
         policy: optimal deterministic policy; instance of Policy class
     """
 
-    v_final = init_v.copy()
-    p = np.zeros(e.spec.num_states)
+    v_final = v_init.copy()
+    p = np.zeros_like(v_final)
 
     while True:
         delta = 0
@@ -147,13 +147,13 @@ if __name__ == "__main__":
     eval_policy = pi_star
 
     # first do value prediction using the optimal policy from the previous value iteration
-    v1, q1 = value_prediction(env_with_model, eval_policy, np.zeros(env.spec.num_states), 1e-4)
-    print(f'State value prediction from optimal policy: {v1}')
-    print(f'Action-state value prediction from the optimal policy: {q1}')
+    v, q = value_prediction(env_with_model, eval_policy, np.zeros(env.spec.num_states), 1e-4)
+    print(f'State value prediction from optimal policy: {v}')
+    print(f'Action-state value prediction from the optimal policy: {q}')
 
     behavior_policy = RandomPolicy(env.spec.num_actions)
 
     # now do value prediction using an equiprobable random policy
-    v2, q2 = value_prediction(env_with_model, behavior_policy, np.zeros(env.spec.num_states), 1e-4)
-    print(f'State value prediction from optimal policy: {v2}')
-    print(f'Action-state value prediction from the optimal policy: {q2}')
+    v, q = value_prediction(env_with_model, behavior_policy, np.zeros(env.spec.num_states), 1e-4)
+    print(f'State value prediction from an equiprobable random policy: {v}')
+    print(f'Action-state value prediction from an equiprobable random policy: {q}')
