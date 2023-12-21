@@ -245,3 +245,5 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [-3. -3. -1. -2.]
  [ 0.  0.  0.  0.]]
 ```
+
+## Chapter 6: Temporal-Difference Learning
