@@ -103,7 +103,10 @@ class GeneralGridWorldMDP(Env):
         self._state = np.random.choice(self.spec.num_states, p=self._td[self._state, action])
         r = self._r[prev_state, action, self._state]
 
-        return self._state, r, self._state == self._final_state
+        return self._state, r, self.is_final(self._state)
+
+    def is_final(self, state):
+        return state == self._final_state
 
     def _build_r_mat(self) -> np.array:
         raise NotImplementedError("_build_r_mat not implemented!")
