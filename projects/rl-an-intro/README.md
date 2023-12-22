@@ -335,7 +335,7 @@ State-action value (Q) prediction using $\epsilon=.5$:
  [ 0.        ,  0.        ,  0.        ,  0.        ]]
 ```
 
-![](images/on_policy_1_step_sarsa_0p5.png "1-step Sarsa, $\epsilon=.5$")
+![](images/on_policy_1_step_sarsa_0p5.png "1-step Sarsa, epsilon=.5")
 
 State-action value (Q) prediction using $\epsilon=.1$:
 ```
@@ -357,7 +357,7 @@ State-action value (Q) prediction using $\epsilon=.1$:
  [ 0.        ,  0.        ,  0.        ,  0.        ]]
 ```
 
-![](images/on_policy_1_step_sarsa_0p1.png "1-step Sarsa, $\epsilon=.1$")
+![](images/on_policy_1_step_sarsa_0p1.png "1-step Sarsa, epsilon=.1")
 
 State-action value (Q) prediction using $\epsilon=.01$:
 ```
@@ -380,7 +380,7 @@ State-action value (Q) prediction using $\epsilon=.01$:
 
 ```
 
-![](images/on_policy_1_step_sarsa_0p01.png "1-step Sarsa, $\epsilon=.01$")
+![](images/on_policy_1_step_sarsa_0p01.png "1-step Sarsa, epsilon=.01")
 
 State-action value (Q) prediction using $\epsilon=.001$:
 ```
@@ -402,4 +402,4 @@ State-action value (Q) prediction using $\epsilon=.001$:
  [ 0.        ,  0.        ,  0.        ,  0.        ]]
 ```
 
-![](images/on_policy_1_step_sarsa_0p001.png "1-step Sarsa, $\epsilon=.001$")
+![](images/on_policy_1_step_sarsa_0p001.png "1-step Sarsa, epsilon=.001")
