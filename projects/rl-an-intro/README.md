@@ -248,7 +248,9 @@ Off-policy action-state value prediction with weighted importance sampling from 
 
 ## Chapter 6: Temporal-Difference Learning
 
-#### TD(0) state value prediction using an equiprobable policy with 100000 trajectories/episodes and various learning rates:
+### TD(0) state value prediction
+
+#### Using an equiprobable policy with 100000 trajectories/episodes and various learning rates:
 
 ##### Note: The DP value prediction (above) was:
 
@@ -313,7 +315,9 @@ Off-policy action-state value prediction with weighted importance sampling from 
  -21.86890885, -19.99301963, -13.88103261,   0.         ]
 ```
 
-#### Sarsa (on-policy TD control) for estimating $Q \approx q_\star$ with various epsilon:
+### Sarsa
+
+#### On-policy TD control for estimating $Q \approx q_\star$ with various epsilon:
 
 State-action value (Q) prediction using $\epsilon=.5$:
 ```
@@ -404,7 +408,9 @@ State-action value (Q) prediction using $\epsilon=.001$:
 
 ![](images/on_policy_1_step_sarsa_0p001.png "1-step Sarsa, epsilon=.001")
 
-#### Q-learning (off-policy TD control) for estimating $Q \approx q_\star$ with various epsilon:
+### Q-learning
+
+#### Off-policy TD control for estimating $Q \approx q_\star$ with various epsilon:
 
 State-action value (Q) prediction using $\epsilon=.5$:
 
@@ -497,3 +503,18 @@ State-action value (Q) prediction using $\epsilon=.001$:
 ```
 
 ![](images/off_policy_1_step_q_learning_0p001.png "1-step Q-learning, epsilon=.001")
+
+### Cliff Walking
+
+#### Sarsa vs Q-learning
+
+##### alpha=.5, epsilon=.1, rolling average=25
+
+##### Sarsa
+
+![](images/cliff_walking_on_policy_1_step_sarsa.png)
+
+##### Q-learning
+
+![](images/cliff_walking_off_policy_1_step_q_learning.png)
+
