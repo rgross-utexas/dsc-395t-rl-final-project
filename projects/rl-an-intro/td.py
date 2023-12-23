@@ -200,7 +200,7 @@ def render(lengths: defaultdict, rewards: defaultdict, epsilon: float,
 
 if __name__ == '__main__':
 
-    rolling_window = 50
+    rolling_window = 500
     alphas = [.5, .1, .05, .01, .05, .001]
     epsilons = [.5, .1, .01, .05, .001]
     n_trajectories = 100000

@@ -339,7 +339,7 @@ State-action value (Q) prediction using $\epsilon=.5$:
  [ 0.        ,  0.        ,  0.        ,  0.        ]]
 ```
 
-![](images/sarsa_0p5.png "Sarsa, epsilon=.5")
+![](images/sarsa_0p5.png "Sarsa, epsilon=.5 (500 episode rolling average)")
 
 State-action value (Q) prediction using $\epsilon=.1$:
 ```
@@ -361,7 +361,7 @@ State-action value (Q) prediction using $\epsilon=.1$:
  [ 0.        ,  0.        ,  0.        ,  0.        ]]
 ```
 
-![](images/sarsa_0p1.png "Sarsa, epsilon=.1")
+![](images/sarsa_0p1.png "Sarsa, epsilon=.1 (500 episode rolling average)")
 
 State-action value (Q) prediction using $\epsilon=.01$:
 ```
@@ -384,7 +384,7 @@ State-action value (Q) prediction using $\epsilon=.01$:
 
 ```
 
-![](images/sarsa_0p01.png "Sarsa, epsilon=.01")
+![](images/sarsa_0p01.png "Sarsa, epsilon=.01 (500 episode rolling average)")
 
 State-action value (Q) prediction using $\epsilon=.001$:
 ```
@@ -406,7 +406,7 @@ State-action value (Q) prediction using $\epsilon=.001$:
  [ 0.        ,  0.        ,  0.        ,  0.        ]]
 ```
 
-![](images/sarsa_0p001.png "Sarsa, epsilon=.001")
+![](images/sarsa_0p001.png "Sarsa, epsilon=.001 (500 episode rolling average)")
 
 ### Q-learning
 
@@ -433,7 +433,7 @@ State-action value (Q) prediction using $\epsilon=.5$:
  [ 0.        ,  0.        ,  0.        ,  0.        ]]
 ```
 
-![](images/q_learning_0p5.png "Q-learning, epsilon=.5")
+![](images/q_learning_0p5.png "Q-learning, epsilon=.5 (500 episode rolling average)")
 
 State-action value (Q) prediction using $\epsilon=.1$:
 
@@ -456,7 +456,7 @@ State-action value (Q) prediction using $\epsilon=.1$:
  [ 0.        ,  0.        ,  0.        ,  0.        ]]
 ```
 
-![](images/q_learning_0p1.png "Q-learning, epsilon=.1")
+![](images/q_learning_0p1.png "Q-learning, epsilon=.1 (500 episode rolling average)")
 
 State-action value (Q) prediction using $\epsilon=.01$:
 
@@ -479,7 +479,7 @@ State-action value (Q) prediction using $\epsilon=.01$:
  [ 0.        ,  0.        ,  0.        ,  0.        ]]
 ```
 
-![](images/q_learning_0p01.png "Q-learning, epsilon=.01")
+![](images/q_learning_0p01.png "Q-learning, epsilon=.01 (500 episode rolling average)")
 
 State-action value (Q) prediction using $\epsilon=.001$:
 
@@ -502,13 +502,13 @@ State-action value (Q) prediction using $\epsilon=.001$:
  [ 0.        ,  0.        ,  0.        ,  0.        ]]
 ```
 
-![](images/q_learning_0p001.png "Q-learning, epsilon=.001")
+![](images/q_learning_0p001.png "Q-learning, epsilon=.001 (500 episode rolling average)")
 
 ### Cliff Walking
 
 #### Sarsa vs Q-learning
 
-##### alpha=.5, epsilon=.1, rolling average=25
+##### alpha=.5, epsilon=.1, episode rolling average=25
 
 ##### Sarsa
 
