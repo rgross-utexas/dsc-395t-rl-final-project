@@ -1,4 +1,3 @@
-
 from collections import defaultdict
 from typing import Iterable, Optional, Tuple
 
@@ -42,13 +41,13 @@ def td_0_prediction(
     return v
 
 
-def on_policy_1_step_sarsa(
+def sarsa(
         env_spec: EnvSpec,
         alpha: float,
         epsilon: float,
         num_episodes: int,
         init_q: np.array
-) -> Tuple[np.array ,defaultdict, defaultdict]:
+) -> Tuple[np.array, defaultdict, defaultdict]:
     """
     input:
         env_spec: environment spec
@@ -83,7 +82,6 @@ def on_policy_1_step_sarsa(
         done = env.is_terminal(s_t)
 
         while not done:
-
             # take a step
             s_t1, r_t1, done = env.step(a_t)
 
@@ -106,13 +104,13 @@ def on_policy_1_step_sarsa(
     return q, episode_rewards, episode_lengths
 
 
-def off_policy_1_step_q_learning(
+def q_learning(
         env_spec: EnvSpec,
         alpha: float,
         epsilon: float,
         num_episodes: int,
         init_q: np.array
-) -> Tuple[np.array ,defaultdict, defaultdict]:
+) -> Tuple[np.array, defaultdict, defaultdict]:
     """
     input:
         env_spec: environment spec
@@ -144,7 +142,6 @@ def off_policy_1_step_q_learning(
         done = env.is_terminal(s_t)
 
         while not done:
-
             # choose an action
             a_t = pi.action(s_t)
 
@@ -167,8 +164,8 @@ def off_policy_1_step_q_learning(
 
 
 def render(lengths: defaultdict, rewards: defaultdict, epsilon: float,
-           filename_template: str, y_min: Optional[float]=None,
-           rolling_window: Optional[int]=None):
+           filename_template: str, reward_y_min: Optional[float] = None,
+           rolling_window: Optional[int] = None):
 
     fig, axes = plt.subplots(2, 1)
 
@@ -195,8 +192,8 @@ def render(lengths: defaultdict, rewards: defaultdict, epsilon: float,
     axes[1].set_ylabel('Episode Reward')
     axes[1].title.set_text(f'Episode Reward with epsilon = {epsilon}')
 
-    if y_min:
-        axes[1].set_ylim(bottom=y_min, top=0)
+    if reward_y_min:
+        axes[1].set_ylim(bottom=reward_y_min, top=0)
 
     plt.savefig(filename_template.format(epsilon=epsilon).replace('.', 'p'))
 
@@ -223,21 +220,21 @@ if __name__ == '__main__':
     # sarsa
 
     for epsilon in epsilons:
-        q, rewards, lengths = on_policy_1_step_sarsa(env.spec, .001, epsilon,
-                                                     n_trajectories,
-                                                     np.zeros((env.spec.num_states, env.spec.num_actions)))
+        q, rewards, lengths = sarsa(env.spec, .001, epsilon,
+                                    n_trajectories,
+                                    np.zeros((env.spec.num_states, env.spec.num_actions)))
         print(f'{q=}')
-        render(lengths, rewards, epsilon, 'on_policy_1_step_sarsa_{epsilon}',
+        render(lengths, rewards, epsilon, 'sarsa_{epsilon}',
                rolling_window=rolling_window)
 
     # q-learning
 
     for epsilon in epsilons:
-        q, rewards, lengths = off_policy_1_step_q_learning(env.spec, .001, epsilon,
-                                                           n_trajectories,
-                                                           np.zeros((env.spec.num_states, env.spec.num_actions)))
+        q, rewards, lengths = q_learning(env.spec, .001, epsilon,
+                                         n_trajectories,
+                                         np.zeros((env.spec.num_states, env.spec.num_actions)))
         print(f'{q=}')
-        render(lengths, rewards, epsilon, 'off_policy_1_step_q_learning_{epsilon}',
+        render(lengths, rewards, epsilon, 'q_learning_{epsilon}',
                rolling_window=rolling_window)
 
     rolling_window = 25
@@ -249,19 +246,18 @@ if __name__ == '__main__':
     start_state = 36
     goal_state = 47
     cliff_states = list(range(37, 47))
-    env = CliffWalkingMDP(12, 4, cliff_states,start_state, goal_state)
+    env = CliffWalkingMDP(12, 4, cliff_states, start_state, goal_state)
 
     epsilon = .1
     alpha = .5
     num_episodes = 1000
     rolling_window = 25
+    reward_y_min = -100
 
-    q, rewards, lengths = on_policy_1_step_sarsa(env.spec, alpha, epsilon, num_episodes,
-                                                 np.random.normal(size=(env.spec.num_states, env.spec.num_actions)))
-    render(lengths, rewards, epsilon, 'cliff_walking_on_policy_1_step_sarsa',
-           -100, rolling_window)
+    q, rewards, lengths = sarsa(env.spec, alpha, epsilon, num_episodes,
+                                np.random.normal(size=(env.spec.num_states, env.spec.num_actions)))
+    render(lengths, rewards, epsilon, 'cliff_walking_sarsa', reward_y_min, rolling_window)
 
-    q, rewards, lengths = off_policy_1_step_q_learning(env.spec, alpha, epsilon, num_episodes,
-                                                       np.random.normal(size=(env.spec.num_states, env.spec.num_actions)))
-    render(lengths, rewards, epsilon, 'cliff_walking_off_policy_1_step_q_learning',
-           -100, rolling_window)
+    q, rewards, lengths = q_learning(env.spec, alpha, epsilon, num_episodes,
+                                     np.random.normal(size=(env.spec.num_states, env.spec.num_actions)))
+    render(lengths, rewards, epsilon, 'cliff_walking_q_learning', reward_y_min, rolling_window)

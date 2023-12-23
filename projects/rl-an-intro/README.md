@@ -339,7 +339,7 @@ State-action value (Q) prediction using $\epsilon=.5$:
  [ 0.        ,  0.        ,  0.        ,  0.        ]]
 ```
 
-![](images/on_policy_1_step_sarsa_0p5.png "1-step Sarsa, epsilon=.5")
+![](images/sarsa_0p5.png "Sarsa, epsilon=.5")
 
 State-action value (Q) prediction using $\epsilon=.1$:
 ```
@@ -361,7 +361,7 @@ State-action value (Q) prediction using $\epsilon=.1$:
  [ 0.        ,  0.        ,  0.        ,  0.        ]]
 ```
 
-![](images/on_policy_1_step_sarsa_0p1.png "1-step Sarsa, epsilon=.1")
+![](images/sarsa_0p1.png "Sarsa, epsilon=.1")
 
 State-action value (Q) prediction using $\epsilon=.01$:
 ```
@@ -384,7 +384,7 @@ State-action value (Q) prediction using $\epsilon=.01$:
 
 ```
 
-![](images/on_policy_1_step_sarsa_0p01.png "1-step Sarsa, epsilon=.01")
+![](images/sarsa_0p01.png "Sarsa, epsilon=.01")
 
 State-action value (Q) prediction using $\epsilon=.001$:
 ```
@@ -406,7 +406,7 @@ State-action value (Q) prediction using $\epsilon=.001$:
  [ 0.        ,  0.        ,  0.        ,  0.        ]]
 ```
 
-![](images/on_policy_1_step_sarsa_0p001.png "1-step Sarsa, epsilon=.001")
+![](images/sarsa_0p001.png "Sarsa, epsilon=.001")
 
 ### Q-learning
 
@@ -433,7 +433,7 @@ State-action value (Q) prediction using $\epsilon=.5$:
  [ 0.        ,  0.        ,  0.        ,  0.        ]]
 ```
 
-![](images/off_policy_1_step_q_learning_0p5.png "1-step Q-learning, epsilon=.5")
+![](images/q_learning_0p5.png "Q-learning, epsilon=.5")
 
 State-action value (Q) prediction using $\epsilon=.1$:
 
@@ -456,7 +456,7 @@ State-action value (Q) prediction using $\epsilon=.1$:
  [ 0.        ,  0.        ,  0.        ,  0.        ]]
 ```
 
-![](images/off_policy_1_step_q_learning_0p1.png "1-step Q-learning, epsilon=.1")
+![](images/q_learning_0p1.png "Q-learning, epsilon=.1")
 
 State-action value (Q) prediction using $\epsilon=.01$:
 
@@ -479,7 +479,7 @@ State-action value (Q) prediction using $\epsilon=.01$:
  [ 0.        ,  0.        ,  0.        ,  0.        ]]
 ```
 
-![](images/off_policy_1_step_q_learning_0p01.png "1-step Q-learning, epsilon=.01")
+![](images/q_learning_0p01.png "Q-learning, epsilon=.01")
 
 State-action value (Q) prediction using $\epsilon=.001$:
 
@@ -502,7 +502,7 @@ State-action value (Q) prediction using $\epsilon=.001$:
  [ 0.        ,  0.        ,  0.        ,  0.        ]]
 ```
 
-![](images/off_policy_1_step_q_learning_0p001.png "1-step Q-learning, epsilon=.001")
+![](images/q_learning_0p001.png "Q-learning, epsilon=.001")
 
 ### Cliff Walking
 
@@ -512,9 +512,9 @@ State-action value (Q) prediction using $\epsilon=.001$:
 
 ##### Sarsa
 
-![](images/cliff_walking_on_policy_1_step_sarsa.png)
+![](images/cliff_walking_sarsa.png)
 
 ##### Q-learning
 
-![](images/cliff_walking_off_policy_1_step_q_learning.png)
+![](images/cliff_walking_q_learning.png)
 
