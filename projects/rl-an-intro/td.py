@@ -270,6 +270,7 @@ def double_q_learning(
         done = env.is_terminal(s_t)
 
         while not done:
+
             # choose an action
             a_t = pi.action(s_t)
 
@@ -338,45 +339,45 @@ if __name__ == '__main__':
 
     # create a model-free mdp to perform value prediction
     env = GeneralDeterministicGridWorldMDP(4, 4)
-    # behavior_policy = RandomPolicy(env.spec.num_actions)
-    #
-    # # generate trajectories from behavior policy
-    # trajs = generate_trajectories(env, behavior_policy, n_trajectories)
-    #
-    # # generate multiple value predictions using various alphas
-    # for alpha in alphas:
-    #     v = td_0_prediction(env.spec, trajs, alpha, np.zeros(env.spec.num_states))
-    #     print(f'TD(0) value prediction with {alpha=}, {n_trajectories=}, {v=}')
-    #
-    # # sarsa
-    #
-    # for epsilon in epsilons:
-    #     q, rewards, lengths = sarsa(env.spec, .001, epsilon,
-    #                                 n_trajectories,
-    #                                 np.zeros((env.spec.num_states, env.spec.num_actions)))
-    #     print(f'{q=}')
-    #     render(lengths, rewards, epsilon, 'sarsa_{epsilon}',
-    #            rolling_window=rolling_window)
-    #
-    # # q-learning
-    #
-    # for epsilon in epsilons:
-    #     q, rewards, lengths = q_learning(env.spec, .001, epsilon,
-    #                                      n_trajectories,
-    #                                      np.zeros((env.spec.num_states, env.spec.num_actions)))
-    #     print(f'{q=}')
-    #     render(lengths, rewards, epsilon, 'q_learning_{epsilon}',
-    #            rolling_window=rolling_window)
-    #
-    # # expected sarsa
-    #
-    # for epsilon in epsilons:
-    #     q, rewards, lengths = expected_sarsa(env.spec, .001, epsilon,
-    #                                          n_trajectories,
-    #                                          np.zeros((env.spec.num_states, env.spec.num_actions)))
-    #     print(f'{q=}')
-    #     render(lengths, rewards, epsilon, 'expected_sarsa_{epsilon}',
-    #            rolling_window=rolling_window)
+    behavior_policy = RandomPolicy(env.spec.num_actions)
+
+    # generate trajectories from behavior policy
+    trajs = generate_trajectories(env, behavior_policy, n_trajectories)
+
+    # generate multiple value predictions using various alphas
+    for alpha in alphas:
+        v = td_0_prediction(env.spec, trajs, alpha, np.zeros(env.spec.num_states))
+        print(f'TD(0) value prediction with {alpha=}, {n_trajectories=}, {v=}')
+
+    # sarsa
+
+    for epsilon in epsilons:
+        q, rewards, lengths = sarsa(env.spec, .001, epsilon,
+                                    n_trajectories,
+                                    np.zeros((env.spec.num_states, env.spec.num_actions)))
+        print(f'{q=}')
+        render(lengths, rewards, epsilon, 'sarsa_{epsilon}',
+               rolling_window=rolling_window)
+
+    # q-learning
+
+    for epsilon in epsilons:
+        q, rewards, lengths = q_learning(env.spec, .001, epsilon,
+                                         n_trajectories,
+                                         np.zeros((env.spec.num_states, env.spec.num_actions)))
+        print(f'{q=}')
+        render(lengths, rewards, epsilon, 'q_learning_{epsilon}',
+               rolling_window=rolling_window)
+
+    # expected sarsa
+
+    for epsilon in epsilons:
+        q, rewards, lengths = expected_sarsa(env.spec, .001, epsilon,
+                                             n_trajectories,
+                                             np.zeros((env.spec.num_states, env.spec.num_actions)))
+        print(f'{q=}')
+        render(lengths, rewards, epsilon, 'expected_sarsa_{epsilon}',
+               rolling_window=rolling_window)
 
     # double q-learning
 
