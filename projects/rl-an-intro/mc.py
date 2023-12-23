@@ -2,11 +2,11 @@ from enum import Enum
 from typing import Iterable, Tuple
 
 import numpy as np
-from tqdm import tqdm
 
 from utils.env import EnvSpec
 from utils.mdp import GeneralDeterministicGridWorldMDP
 from utils.policy import DeterministicPolicy, Policy, RandomPolicy
+from utils.utils import generate_trajectories
 
 DELTA = 1e-10
 
@@ -249,26 +249,6 @@ def off_policy_control(
     return pi, q_final
 
 
-def generate_trajectories(bpi: Policy, num_trajectories: int):
-
-    trajs = []
-    for _ in tqdm(range(num_trajectories)):
-        states, actions, rewards, done = [env.reset()], [], [], []
-
-        while not done:
-            a = bpi.action(states[-1])
-            s, r, done = env.step(a)
-
-            states.append(s)
-            actions.append(a)
-            rewards.append(r)
-
-        traj = list(zip(states[:-1], actions, rewards, states[1:]))
-        trajs.append(traj)
-
-    return trajs
-
-
 if __name__ == "__main__":
 
     # create a model-free mdp to perform value prediction
@@ -277,7 +257,7 @@ if __name__ == "__main__":
 
     # generate trajectories from behavior policy
     n_trajectories = 100000
-    trajs = generate_trajectories(behavior_policy, n_trajectories)
+    trajs = generate_trajectories(env, behavior_policy, n_trajectories)
 
     # all the runs below use trajectories from the random behavior policy
 
