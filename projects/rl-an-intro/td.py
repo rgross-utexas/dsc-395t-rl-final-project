@@ -55,10 +55,11 @@ def sarsa(
         alpha: learning rate
         epsilon: exploration rate
         num_episodes: number of episodes to run
-        init_q: initial Q values; np array shape of [nS,nA]
+        init_q: initial Q values; np array shape of [num_states,num_actions]
     ret:
-        q: $q_star$ function; numpy array shape of [nS,nA]
-        policy: $pi_star$; instance of policy class
+        q: $q_star$ function; numpy array shape of [num_states,num_actions]
+        episode_rewards: rewards by episode
+        episode_lengths: episode lengths by episode
     """
 
     q = init_q.copy()
@@ -113,15 +114,16 @@ def expected_sarsa(
         init_q: np.array
 ) -> Tuple[np.array, defaultdict, defaultdict]:
     """
-    input:
+    args:
         env_spec: environment spec
         alpha: learning rate
         epsilon: exploration rate
         num_episodes: number of episodes to run
-        init_q: initial Q values; np array shape of [nS,nA]
-    ret:
-        q: $q_star$ function; numpy array shape of [nS,nA]
-        policy: $pi_star$; instance of policy class
+        init_q: initial Q values; np array shape of [num_states,num_actions]
+    return:
+        q: $q_star$ function; numpy array shape of [num_states,num_actions]
+        episode_rewards: rewards by episode
+        episode_lengths: episode lengths by episode
     """
 
     q = init_q.copy()
@@ -180,15 +182,16 @@ def q_learning(
         init_q: np.array
 ) -> Tuple[np.array, defaultdict, defaultdict]:
     """
-    input:
+    args:
         env_spec: environment spec
         alpha: learning rate
         epsilon: exploration rate
         num_episodes: number of episodes to run
-        init_q: initial Q values; np array shape of [nS,nA]
-    ret:
-        q: $q_star$ function; numpy array shape of [nS,nA]
-        policy: $pi_star$; instance of policy class
+        init_q: initial Q values; np array shape of [num_states,num_actions]
+    return:
+        q: $q_star$ function; numpy array shape of [num_states,num_actions]
+        episode_rewards: rewards by episode
+        episode_lengths: episode lengths by episode
     """
 
     q = init_q.copy()
@@ -239,15 +242,16 @@ def double_q_learning(
         init_q: np.array
 ) -> Tuple[np.array, defaultdict, defaultdict]:
     """
-    input:
+    args:
         env_spec: environment spec
         alpha: learning rate
         epsilon: exploration rate
         num_episodes: number of episodes to run
-        init_q: initial Q values; np array shape of [nS,nA]
-    ret:
-        q: $q_star$ function; numpy array shape of [nS,nA]
-        policy: $pi_star$; instance of policy class
+        init_q: initial Q values; np array shape of [num_states,num_actions]
+    return:
+        q: $q_star$ function; numpy array shape of [num_states,num_actions]
+        episode_rewards: rewards by episode
+        episode_lengths: episode lengths by episode
     """
 
     q1 = init_q.copy()
