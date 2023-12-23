@@ -203,75 +203,53 @@ def render(lengths: defaultdict, rewards: defaultdict, epsilon: float,
 
 if __name__ == '__main__':
 
+    rolling_window = 50
+    alphas = [.5, .1, .05, .01, .05, .001]
+    epsilons = [.5, .1, .01, .05, .001]
+    n_trajectories = 100000
+
     # create a model-free mdp to perform value prediction
     env = GeneralDeterministicGridWorldMDP(4, 4)
     behavior_policy = RandomPolicy(env.spec.num_actions)
 
     # generate trajectories from behavior policy
-    n_trajectories = 100000
     trajs = generate_trajectories(env, behavior_policy, n_trajectories)
 
     # generate multiple value predictions using various alphas
-    for alpha in [.5, .1, .05, .01, .05, .001]:
+    for alpha in alphas:
         v = td_0_prediction(env.spec, trajs, alpha, np.zeros(env.spec.num_states))
         print(f'TD(0) value prediction with {alpha=}, {n_trajectories=}, {v=}')
 
     # sarsa
 
-    epsilon = .5
-    q, rewards, lengths = on_policy_1_step_sarsa(env.spec, .001, epsilon, 100000, np.zeros((env.spec.num_states, env.spec.num_actions)))
-    print(f'{q=}')
-
-    render(lengths, rewards, epsilon, 'on_policy_1_step_sarsa_{epsilon}')
-
-    epsilon = .1
-    q, rewards, lengths = on_policy_1_step_sarsa(env.spec, .001, epsilon, 100000, np.zeros((env.spec.num_states, env.spec.num_actions)))
-    print(f'{q=}')
-
-    render(lengths, rewards, epsilon, 'on_policy_1_step_sarsa_{epsilon}')
-
-    epsilon = .01
-    q, rewards, lengths = on_policy_1_step_sarsa(env.spec, .001, epsilon, 100000, np.zeros((env.spec.num_states, env.spec.num_actions)))
-    print(f'{q=}')
-
-    render(lengths, rewards, epsilon, 'on_policy_1_step_sarsa_{epsilon}')
-
-    epsilon = .001
-    q, rewards, lengths = on_policy_1_step_sarsa(env.spec, .001, epsilon, 100000, np.zeros((env.spec.num_states, env.spec.num_actions)))
-    print(f'{q=}')
-
-    render(lengths, rewards, epsilon, 'on_policy_1_step_sarsa_{epsilon}')
+    for epsilon in epsilons:
+        q, rewards, lengths = on_policy_1_step_sarsa(env.spec, .001, epsilon,
+                                                     n_trajectories,
+                                                     np.zeros((env.spec.num_states, env.spec.num_actions)))
+        print(f'{q=}')
+        render(lengths, rewards, epsilon, 'on_policy_1_step_sarsa_{epsilon}',
+               rolling_window=rolling_window)
 
     # q-learning
 
-    epsilon = .5
-    q, rewards, lengths = off_policy_1_step_q_learning(env.spec, .001, epsilon, 100000, np.zeros((env.spec.num_states, env.spec.num_actions)))
-    print(f'{q=}')
+    for epsilon in epsilons:
+        q, rewards, lengths = off_policy_1_step_q_learning(env.spec, .001, epsilon,
+                                                           n_trajectories,
+                                                           np.zeros((env.spec.num_states, env.spec.num_actions)))
+        print(f'{q=}')
+        render(lengths, rewards, epsilon, 'off_policy_1_step_q_learning_{epsilon}',
+               rolling_window=rolling_window)
 
-    render(lengths, rewards, epsilon, 'off_policy_1_step_q_learning_{epsilon}')
-
-    epsilon = .1
-    q, rewards, lengths = off_policy_1_step_q_learning(env.spec, .001, epsilon, 100000, np.zeros((env.spec.num_states, env.spec.num_actions)))
-    print(f'{q=}')
-
-    render(lengths, rewards, epsilon, 'off_policy_1_step_q_learning_{epsilon}')
-
-    epsilon = .01
-    q, rewards, lengths = off_policy_1_step_q_learning(env.spec, .001, epsilon, 100000, np.zeros((env.spec.num_states, env.spec.num_actions)))
-    print(f'{q=}')
-
-    render(lengths, rewards, epsilon, 'off_policy_1_step_q_learning_{epsilon}')
-
-    epsilon = .001
-    q, rewards, lengths = off_policy_1_step_q_learning(env.spec, .001, epsilon, 100000, np.zeros((env.spec.num_states, env.spec.num_actions)))
-    print(f'{q=}')
-
-    render(lengths, rewards, epsilon, 'off_policy_1_step_q_learning_{epsilon}')
+    rolling_window = 25
 
     # create a cliff walking env
+
     # TODO: Refactor this to something general
-    cliff_states = [37, 38, 39, 40, 41, 42, 43, 44, 45, 46]
-    env = CliffWalkingMDP(12, 4, cliff_states,36, 47)
+
+    start_state = 36
+    goal_state = 47
+    cliff_states = list(range(37, 47))
+    env = CliffWalkingMDP(12, 4, cliff_states,start_state, goal_state)
 
     epsilon = .1
     alpha = .5
