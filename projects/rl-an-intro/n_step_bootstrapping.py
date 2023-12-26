@@ -1,4 +1,3 @@
-import random
 from collections import defaultdict
 from typing import List, Optional, Tuple
 
@@ -8,8 +7,8 @@ import pandas as pd
 from tqdm import tqdm
 
 from utils.env import EnvSpec
-from utils.mdp import CliffWalkingMDP, GeneralDeterministicGridWorldMDP
-from utils.policy import DoubleEGreedyPolicy, EGreedyPolicy, RandomPolicy
+from utils.mdp import GeneralDeterministicGridWorldMDP
+from utils.policy import EGreedyPolicy, Policy, RandomPolicy
 from utils.utils import generate_trajectories
 
 INFINITY = 10e10
@@ -177,6 +176,119 @@ def on_policy_sarsa(
     return q, episode_rewards, episode_lengths
 
 
+def off_policy_sarsa(
+        env_spec: EnvSpec,
+        alpha: float,
+        epsilon: float,
+        trajs: List[List[Tuple[int, int, int, int]]],
+        n: int,
+        bpi: Policy,
+        init_q: np.array
+) -> Tuple[np.array, defaultdict, defaultdict]:
+    """
+    input:
+        env_spec: environment spec
+        alpha: learning rate
+        epsilon: exploration rate
+        num_episodes: number of episodes to run
+        n: number of steps
+        bpi: behavior Policy
+        init_q: initial Q values; np array shape of [num_states,num_actions]
+    ret:
+        q: $q_star$ function; numpy array shape of [num_states,num_actions]
+        episode_rewards: rewards by episode
+        episode_lengths: episode lengths by episode
+    """
+
+    q = init_q.copy()
+
+    # this is on-policy so create a policy backed by q
+    pi = EGreedyPolicy(q, epsilon)
+    gamma = env_spec.gamma
+
+    # track the length and rewards for each episode
+    episode_lengths = defaultdict(float)
+    episode_rewards = defaultdict(float)
+
+    for e in tqdm(range(len(trajs))):
+
+        traj = trajs[e]
+
+        states = []
+        actions = []
+        rewards = []
+
+        t = 0
+        t_terminal = np.inf
+        _, _, _, s_terminal = traj[-1]
+
+        s_t, a_t, _, _ = traj[t]
+
+        # get the initial state and action
+        states.append(s_t)
+        actions.append(a_t)
+
+        # give a reward of 0 for time 0
+        rewards.append(0)
+
+        while True:
+
+            # get the step data
+            s_t, a_t, r_t1, s_t1 = traj[t % len(traj)]
+
+            if t < t_terminal:
+
+                # take a step based on the action
+                states.append(s_t1)
+                rewards.append(r_t1)
+
+                if s_t1 == s_terminal:
+                    # the next time step is terminal
+                    t_terminal = t + 1
+                else:
+
+                    # take an action from the next step, since this is sarsa
+                    _, a_t1, _, _ = traj[t + 1]
+                    actions.append(a_t1)
+
+            tau = t - n + 1
+            if tau >= 0:
+
+                rho = 1.
+                for i in range(tau + 1, min(tau + n, t_terminal)):
+                    s_i = states[i]
+                    a_i = actions[i]
+                    pi_p = pi.action_prob(s_i, a_i)
+                    bpi_p = bpi.action_prob(s_i, a_i)
+                    rho *= pi_p/bpi_p
+
+                g = 0.
+                for i in range(tau + 1, min(tau + n, t_terminal) + 1):
+                    g += (gamma ** (i - (tau + 1))) * rewards[i]
+
+                if tau + n < t_terminal:
+
+                    # get the state-action for tau + n
+                    s_tau_n = states[tau + n]
+                    a_tau_n = actions[tau + n]
+
+                    g += (gamma ** n) * q[s_tau_n, a_tau_n]
+
+                # get the state action for tau
+                s_tau = states[tau]
+                a_tau = actions[tau]
+
+                # update rule
+                q[s_tau, a_tau] += alpha * rho * (g - q[s_tau, a_tau])
+
+            if tau == t_terminal - 1:
+                break
+
+            t += 1
+
+    return q, episode_rewards, episode_lengths
+
+
 def render(lengths: defaultdict, rewards: defaultdict, epsilon: float,
            filename_template: str, reward_y_min: Optional[float] = None,
            rolling_window: Optional[int] = None):
@@ -223,21 +335,46 @@ if __name__ == '__main__':
     env = GeneralDeterministicGridWorldMDP(4, 4)
     behavior_policy = RandomPolicy(env.spec.num_actions)
 
+    # # generate trajectories from behavior policy
+    # trajs = generate_trajectories(env, behavior_policy, n_trajectories)
+    #
+    # # n-step td
+    #
+    # print('\nn-step TD:\n')
+    #
+    # for n in n_steps:
+    #     v = on_policy_n_step_td(env.spec, trajs, n, alpha, np.zeros(env.spec.num_states))
+    #     print(f'\nNumber of steps: {n}, alpha: {alpha}, '
+    #           f'number of episodes/trajectories: {n_trajectories}:\n{v}')
+    #
+    # # n-step on-policy sarsa
+    #
+    # print('\nn-step on-policy Sarsa:\n')
+    #
+    # n_trajectories = 100000
+    # for n in n_steps:
+    #     q, rewards, lengths = on_policy_sarsa(env.spec, alpha, epsilon, n_trajectories, n,
+    #                                           np.zeros((env.spec.num_states, env.spec.num_actions)))
+    #     print(f'\nNumber of steps: {n}, epsilon: {epsilon}, alpha: {alpha}, '
+    #           f'number of episodes/trajectories: {n_trajectories}:\n{q}')
+
+    # n-step off-policy sarsa
+
+    print('\nn-step off-policy Sarsa:\n')
+
+    n_trajectories = 500000
+
     # generate trajectories from behavior policy
     trajs = generate_trajectories(env, behavior_policy, n_trajectories)
 
-    # n-step td
-
+    epsilon = .1
+    alpha = .005
+    epsilons = [.1, .05, .01, .005, .001]
+    alphas = [.1, .05, .01, .005, .001]
     for n in n_steps:
-        v = on_policy_n_step_td(env.spec, trajs, n, alpha, np.zeros(env.spec.num_states))
-        print(f'\nNumber of steps: {n}, alpha: {alpha}, '
-              f'number of episodes/trajectories: {n_trajectories}:\n{v}')
-
-    # n-step on-policy sarsa
-
-    n_trajectories = 100000
-    for n in n_steps:
-        q, rewards, lengths = on_policy_sarsa(env.spec, alpha, epsilon, n_trajectories, n,
-                                              np.zeros((env.spec.num_states, env.spec.num_actions)))
+        # for alpha in alphas:
+        #     for epsilon in epsilons:
+        q, rewards, lengths = off_policy_sarsa(env.spec, alpha, epsilon, trajs, n, behavior_policy,
+                                           np.zeros((env.spec.num_states, env.spec.num_actions)))
         print(f'\nNumber of steps: {n}, epsilon: {epsilon}, alpha: {alpha}, '
               f'number of episodes/trajectories: {n_trajectories}:\n{q}')
