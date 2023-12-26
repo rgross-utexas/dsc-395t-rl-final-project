@@ -28,7 +28,7 @@ def td_0_prediction(
             (s_t,a_t,r_{t+1},s_{t+1})
         alpha: learning rate
         init_v: initial V values; np array shape of [num_states]
-    ret:
+    args:
         v: $v_pi$ function; numpy array shape of [num_states]
     """
 
@@ -56,14 +56,17 @@ def sarsa(
         epsilon: exploration rate
         num_episodes: number of episodes to run
         init_q: initial Q values; np array shape of [num_states,num_actions]
-    ret:
+    args:
         q: $q_star$ function; numpy array shape of [num_states,num_actions]
         episode_rewards: rewards by episode
         episode_lengths: episode lengths by episode
     """
 
     q = init_q.copy()
+
+    # this is on-policy so create a policy backed by q
     pi = EGreedyPolicy(q, epsilon)
+
     gamma = env_spec.gamma
 
     # track the length and rewards for each episode
