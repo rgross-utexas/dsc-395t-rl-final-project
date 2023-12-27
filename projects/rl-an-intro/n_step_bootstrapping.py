@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from utils.env import EnvSpec
 from utils.mdp import GeneralDeterministicGridWorldMDP
-from utils.policy import EGreedyPolicy, Policy, RandomPolicy
+from utils.policy import EGreedyPolicy, GreedyPolicy, Policy, RandomPolicy
 from utils.utils import generate_trajectories
 
 INFINITY = 10e10
@@ -82,8 +82,9 @@ def on_policy_sarsa(
         epsilon: float,
         num_episodes: int,
         n: int,
-        init_q: np.array
-) -> Tuple[np.array, defaultdict, defaultdict]:
+        init_q: np.array,
+        q_star: Optional[np.array] = None
+) -> Tuple[np.array, defaultdict, defaultdict, defaultdict]:
     """
     input:
         env_spec: environment spec
@@ -107,6 +108,7 @@ def on_policy_sarsa(
     # track the length and rewards for each episode
     episode_lengths = defaultdict(float)
     episode_rewards = defaultdict(float)
+    episode_rmse = defaultdict(float)
 
     for e in tqdm(range(num_episodes)):
 
@@ -173,18 +175,22 @@ def on_policy_sarsa(
 
             t += 1
 
-    return q, episode_rewards, episode_lengths
+        if q_star is not None:
+            rmse = np.sqrt(np.power(q - q_star, 2).sum())
+            episode_rmse[e] = rmse
+
+    return q, episode_rewards, episode_lengths, episode_rmse
 
 
 def off_policy_sarsa(
         env_spec: EnvSpec,
         alpha: float,
-        epsilon: float,
-        trajs: List[List[Tuple[int, int, int, int]]],
+        num_episodes: int,
         n: int,
         bpi: Policy,
-        init_q: np.array
-) -> Tuple[np.array, defaultdict, defaultdict]:
+        init_q: np.array,
+        q_star: Optional[np.array] = None
+) -> Tuple[np.array, defaultdict, defaultdict, defaultdict]:
     """
     input:
         env_spec: environment spec
@@ -203,16 +209,15 @@ def off_policy_sarsa(
     q = init_q.copy()
 
     # this is on-policy so create a policy backed by q
-    pi = EGreedyPolicy(q, epsilon)
+    pi = GreedyPolicy(q)
     gamma = env_spec.gamma
 
     # track the length and rewards for each episode
     episode_lengths = defaultdict(float)
     episode_rewards = defaultdict(float)
+    episode_rmse = defaultdict(float)
 
-    for e in tqdm(range(len(trajs))):
-
-        traj = trajs[e]
+    for e in tqdm(range(num_episodes)):
 
         states = []
         actions = []
@@ -220,12 +225,13 @@ def off_policy_sarsa(
 
         t = 0
         t_terminal = np.inf
-        _, _, _, s_terminal = traj[-1]
 
-        s_t, a_t, _, _ = traj[t]
-
-        # get the initial state and action
+        # get the initial state
+        s_t = env.reset()
         states.append(s_t)
+
+        # choose an action
+        a_t = bpi.action(s_t)
         actions.append(a_t)
 
         # give a reward of 0 for time 0
@@ -233,23 +239,21 @@ def off_policy_sarsa(
 
         while True:
 
-            # get the step data
-            s_t, a_t, r_t1, s_t1 = traj[t % len(traj)]
-
             if t < t_terminal:
 
                 # take a step based on the action
+                s_t1, r_t1, done = env.step(a_t)
                 states.append(s_t1)
                 rewards.append(r_t1)
 
-                if s_t1 == s_terminal:
+                if done:
                     # the next time step is terminal
                     t_terminal = t + 1
                 else:
 
-                    # take an action from the next step, since this is sarsa
-                    _, a_t1, _, _ = traj[t + 1]
-                    actions.append(a_t1)
+                    # take an action from the next step
+                    a_t = bpi.action(s_t1)
+                    actions.append(a_t)
 
             tau = t - n + 1
             if tau >= 0:
@@ -286,42 +290,148 @@ def off_policy_sarsa(
 
             t += 1
 
-    return q, episode_rewards, episode_lengths
+        if q_star is not None:
+            rmse = np.sqrt(np.power(q - q_star, 2).sum())
+            episode_rmse[e] = rmse
+
+    return q, episode_rewards, episode_lengths, episode_rmse
 
 
-def render(lengths: defaultdict, rewards: defaultdict, epsilon: float,
-           filename_template: str, reward_y_min: Optional[float] = None,
-           rolling_window: Optional[int] = None):
+def tree_backup(
+        env_spec: EnvSpec,
+        alpha: float,
+        num_episodes: int,
+        n: int,
+        init_q: np.array,
+        q_star: Optional[np.array] = None
+) -> Tuple[np.array, defaultdict, defaultdict, defaultdict]:
+    """
+    input:
+        env_spec: environment spec
+        alpha: learning rate
+        epsilon: exploration rate
+        num_episodes: number of episodes to run
+        n: number of steps
+        init_q: initial Q values; np array shape of [num_states,num_actions]
+    ret:
+        q: $q_star$ function; numpy array shape of [num_states,num_actions]
+        episode_rewards: rewards by episode
+        episode_lengths: episode lengths by episode
+    """
 
-    fig, axes = plt.subplots(2, 1)
+    q = init_q.copy()
+
+    # this is on-policy so create a policy backed by q
+    pi = GreedyPolicy(q)
+    gamma = env_spec.gamma
+
+    # track the length and rewards for each episode
+    episode_lengths = defaultdict(float)
+    episode_rewards = defaultdict(float)
+    episode_rmse = defaultdict(float)
+
+    for e in tqdm(range(num_episodes)):
+
+        states = []
+        actions = []
+        rewards = []
+
+        t = 0
+        t_terminal = np.inf
+
+        # get the initial state
+        s_t = env.reset()
+        states.append(s_t)
+
+        # choose an action
+        a_t = pi.action(s_t)
+        actions.append(a_t)
+
+        # give a reward of 0 for time 0
+        rewards.append(0)
+
+        while True:
+
+            if t < t_terminal:
+
+                # take a step based on the action
+                s_t1, r_t1, done = env.step(a_t)
+                states.append(s_t1)
+                rewards.append(r_t1)
+
+                if done:
+                    # the next time step is terminal
+                    t_terminal = t + 1
+                else:
+
+                    # # take a random action for the next step
+                    # a_t = np.random.choice(env_spec.num_actions)
+
+                    # take an action from the next step
+                    a_t = pi.action(s_t1)
+
+                    actions.append(a_t)
+
+            tau = t - n + 1
+            if tau >= 0:
+
+                if t + 1 >= t_terminal:
+                    g = rewards[t_terminal]
+                else:
+                    e_sa = 0.
+                    for a in range(env_spec.num_actions):
+                        e_sa += pi.action_prob(s_t1, a) * q[s_t1, a]
+
+                    g = rewards[t + 1] + gamma * e_sa
+
+                for k in reversed(range(tau + 1, min(t, t_terminal - 1) + 1)):
+
+                    s_k = states[k]
+                    a_k = actions[k]
+
+                    e_sa = 0.
+                    for a in range(env_spec.num_actions):
+                        if a != a_k:
+                            e_sa += pi.action_prob(s_k, a) * q[s_k, a]
+                        else:
+                            e_sa += pi.action_prob(s_k, a_k) * g
+
+                    g += rewards[k] + gamma * e_sa
+
+                # get the state action for tau
+                s_tau = states[tau]
+                a_tau = actions[tau]
+
+                # update rule
+                q[s_tau, a_tau] += alpha * (g - q[s_tau, a_tau])
+
+            if tau == t_terminal - 1:
+                break
+
+            t += 1
+
+        if q_star is not None:
+            rmse = np.sqrt(np.power(q - q_star, 2).sum())
+            episode_rmse[e] = rmse
+
+    return q, episode_rewards, episode_lengths, episode_rmse
+
+# TODO: Implement n-step Q-sigma
+
+
+def render_rmse(rmse: defaultdict, filename: str):
+
+    fig, axis = plt.subplots(1, 1)
 
     fig.set_figwidth(12)
-    fig.set_figheight(12)
+    fig.set_figheight(5)
 
-    episodes = lengths.keys()
-    lengths = lengths.values()
-    if rolling_window is not None:
-        lengths = pd.Series(lengths).rolling(rolling_window, min_periods=rolling_window).mean()
+    axis.plot(rmse.keys(), rmse.values())
+    axis.set_xlabel('Episode')
+    axis.set_ylabel('Episode RMSE')
+    axis.title.set_text(f'Episode RMSE')
 
-    axes[0].plot(episodes, lengths)
-    axes[0].set_xlabel('Episode')
-    axes[0].set_ylabel('Episode Length')
-    axes[0].title.set_text(f'Episode Length with epsilon = {epsilon}')
-
-    episodes = rewards.keys()
-    rewards = rewards.values()
-    if rolling_window is not None:
-        rewards = pd.Series(rewards).rolling(rolling_window, min_periods=rolling_window).mean()
-
-    axes[1].plot(episodes, rewards)
-    axes[1].set_xlabel('Episode')
-    axes[1].set_ylabel('Episode Reward')
-    axes[1].title.set_text(f'Episode Reward with epsilon = {epsilon}')
-
-    if reward_y_min:
-        axes[1].set_ylim(bottom=reward_y_min, top=0)
-
-    plt.savefig(filename_template.format(epsilon=epsilon).replace('.', 'p'))
+    plt.savefig(filename.replace('.', 'p'))
 
 
 if __name__ == '__main__':
@@ -335,46 +445,79 @@ if __name__ == '__main__':
     env = GeneralDeterministicGridWorldMDP(4, 4)
     behavior_policy = RandomPolicy(env.spec.num_actions)
 
-    # # generate trajectories from behavior policy
-    # trajs = generate_trajectories(env, behavior_policy, n_trajectories)
-    #
-    # # n-step td
-    #
-    # print('\nn-step TD:\n')
-    #
-    # for n in n_steps:
-    #     v = on_policy_n_step_td(env.spec, trajs, n, alpha, np.zeros(env.spec.num_states))
-    #     print(f'\nNumber of steps: {n}, alpha: {alpha}, '
-    #           f'number of episodes/trajectories: {n_trajectories}:\n{v}')
-    #
-    # # n-step on-policy sarsa
-    #
-    # print('\nn-step on-policy Sarsa:\n')
-    #
-    # n_trajectories = 100000
-    # for n in n_steps:
-    #     q, rewards, lengths = on_policy_sarsa(env.spec, alpha, epsilon, n_trajectories, n,
-    #                                           np.zeros((env.spec.num_states, env.spec.num_actions)))
-    #     print(f'\nNumber of steps: {n}, epsilon: {epsilon}, alpha: {alpha}, '
-    #           f'number of episodes/trajectories: {n_trajectories}:\n{q}')
+    # generate trajectories from behavior policy
+    trajs = generate_trajectories(env, behavior_policy, n_trajectories)
+
+    # n-step td
+
+    print('\nn-step TD:\n')
+
+    for n in n_steps:
+        print(f'\nNumber of steps: {n}, alpha: {alpha}, '
+              f'number of episodes/trajectories: {n_trajectories}:')
+        v = on_policy_n_step_td(env.spec, trajs, n, alpha, np.zeros(env.spec.num_states))
+        print(f'\n{v}')
+
+    q_star = np.array(
+        [[ 0.,  0.,  0.,  0.],
+         [-1., -2., -3., -3.],
+         [-2., -3., -4., -4.],
+         [-3., -4., -4., -3.],
+         [-2., -1., -3., -3.],
+         [-2., -2., -4., -4.],
+         [-3., -3., -3., -3.],
+         [-4., -4., -3., -2.],
+         [-3., -2., -4., -4.],
+         [-3., -3., -3., -3.],
+         [-4., -4., -2., -2.],
+         [-3., -3., -2., -1.],
+         [-4., -3., -3., -4.],
+         [-4., -4., -2., -3.],
+         [-3., -3., -1., -2.]]
+    )
+
+    # n-step on-policy sarsa
+
+    print('\nn-step on-policy Sarsa:')
+
+    epsilon = .1
+    n_trajectories = 50000
+
+    for n in n_steps:
+        print(f'\nNumber of steps: {n}, epsilon: {epsilon}, alpha: {alpha}, '
+              f'number of episodes/trajectories: {n_trajectories}:')
+        q, rewards, lengths, rmse = on_policy_sarsa(env.spec, alpha, epsilon, n_trajectories, n,
+                                                    np.zeros((env.spec.num_states, env.spec.num_actions)),
+                                                    q_star)
+        print(f'\n{q}')
+        render_rmse(rmse, f"on_policy_sarsa_rmse_{n}")
+
+    print('\nn-step tree backup:')
+
+    n_trajectories = 100000
+    alpha = .005
+    n_steps = [1, 2, 3, 4, 5, 10]
+
+    for n in n_steps:
+        print(f'\nNumber of steps: {n}, alpha: {alpha}, '
+              f'number of episodes/trajectories: {n_trajectories}:')
+        q, rewards, lengths, rmse = tree_backup(env.spec, alpha, n_trajectories, n,
+                                                np.zeros((env.spec.num_states, env.spec.num_actions)),
+                                                q_star)
+        print(f'\n{q}')
+        render_rmse(rmse, f"tree_backup_rmse_{n}")
 
     # n-step off-policy sarsa
 
     print('\nn-step off-policy Sarsa:\n')
 
-    n_trajectories = 500000
-
-    # generate trajectories from behavior policy
-    trajs = generate_trajectories(env, behavior_policy, n_trajectories)
-
-    epsilon = .1
-    alpha = .005
-    epsilons = [.1, .05, .01, .005, .001]
-    alphas = [.1, .05, .01, .005, .001]
+    n_trajectories = 10000000
+    alpha = .001
     for n in n_steps:
-        # for alpha in alphas:
-        #     for epsilon in epsilons:
-        q, rewards, lengths = off_policy_sarsa(env.spec, alpha, epsilon, trajs, n, behavior_policy,
-                                           np.zeros((env.spec.num_states, env.spec.num_actions)))
-        print(f'\nNumber of steps: {n}, epsilon: {epsilon}, alpha: {alpha}, '
-              f'number of episodes/trajectories: {n_trajectories}:\n{q}')
+        print(f'\nNumber of steps: {n}, alpha: {alpha}, '
+              f'number of episodes/trajectories: {n_trajectories}:')
+        q, rewards, lengths, rmse = off_policy_sarsa(env.spec, alpha, n_trajectories, n, behavior_policy,
+                                                     np.random.normal(size=(env.spec.num_states, env.spec.num_actions)),
+                                                     q_star)
+        print(f'\n{q}')
+        render_rmse(rmse, f"off_policy_sarsa_rmse_{n}")

@@ -48,10 +48,10 @@ class DeterministicPolicy(Policy):
         self._p = p
 
     def action_prob(self, state: int, action: int) -> float:
-        return 1 if self._p[state] == action else 0
+        return 1 if self.p[state] == action else 0
 
     def action(self, state: int) -> int:
-        return self._p[state]
+        return self.p[state]
 
     @property
     def p(self) -> np.array:
@@ -64,10 +64,12 @@ class GreedyPolicy(Policy):
         self._p = p
 
     def action_prob(self, state: int, action: int) -> float:
-        return 1 if np.argmax(self.p[state]) == action else 0
+        probs = self._p[state]
+        return 1 if np.random.choice(np.flatnonzero(probs == probs.max())) == action else 0
 
     def action(self, state: int) -> int:
-        return int(np.argmax(self._p[state]))
+        probs = self._p[state]
+        return int(np.random.choice(np.flatnonzero(probs == probs.max())))
 
     @property
     def p(self) -> np.array:
@@ -86,16 +88,18 @@ class EGreedyPolicy(Policy):
         if np.random.random_sample() < self.epsilon:
             return 1 / num_actions
         else:
-            if np.argmax(self._p[state]) == action:
+            probs = self.p[state]
+            if np.random.choice(np.flatnonzero(probs == probs.max())) == action:
                 return 1 - self.epsilon + self.epsilon / num_actions
             else:
                 return self.epsilon / num_actions
 
     def action(self, state: int) -> int:
         if np.random.random_sample() < self.epsilon:
-            return np.random.choice(self._p.shape[1])
+            return np.random.choice(self.p.shape[1])
         else:
-            return int(np.argmax(self._p[state]))
+            probs = self.p[state]
+            return int(np.random.choice(np.flatnonzero(probs == probs.max())))
 
     @property
     def p(self) -> np.array:
@@ -124,7 +128,8 @@ class DoubleEGreedyPolicy(Policy):
         if np.random.random_sample() < self.epsilon:
             return np.random.choice(self._p1.shape[1])
         else:
-            return int(np.argmax(self.p[state]))
+            probs = self.p[state]
+            return int(np.random.choice(np.flatnonzero(probs == probs.max())))
 
     @property
     def p(self) -> np.array:
