@@ -16,7 +16,8 @@ INFINITY = 10e10
 
 def on_policy_n_step_td(
         env_spec: EnvSpec,
-        trajs: List[List[Tuple[int, int, int, int]]],
+        pi: Policy,
+        num_episodes: int,
         n: int,
         alpha: float,
         init_v: np.array
@@ -36,36 +37,48 @@ def on_policy_n_step_td(
     v = init_v.copy()
     gamma = env_spec.gamma
 
-    for traj in trajs:
+    for e in tqdm(range(num_episodes)):
 
-        # get the max t so that we can modulo by it for large number of steps
-        t_max = len(traj)
+        states = []
+        rewards = []
+
+        t = 0
         t_terminal = np.inf
 
-        # get the terminal state from the trajectory
-        _, _, _, terminal_state = traj[-1]
-        t = 0
+        # get the initial state
+        s_t = env.reset()
+        states.append(s_t)
+
+        # give a reward of 0 for time 0
+        rewards.append(0)
+
         while True:
 
             # get the data from the trajectory for time t
-            s_t, a_t, r_t1, s_t1 = traj[t % t_max]
-            if t < t_terminal:
-                if s_t1 == terminal_state:
+            if not env.is_terminal(s_t):
+
+                s_t1, r_t1, done = env.step(pi.action(s_t))
+                states.append(s_t1)
+                rewards.append(r_t1)
+
+                if env.is_terminal(s_t1):
                     t_terminal = t + 1
+
+                s_t = s_t1
 
             tau = t - n + 1
             if tau >= 0:
 
                 g = 0.
                 for i in range(tau + 1, min(tau + n, t_terminal) + 1):
-                    _, _, r_i, _ = traj[i % t_max]
+                    r_i = rewards[i]
                     g += (gamma ** (i - (tau + 1))) * r_i
 
                 if tau + n < t_terminal:
-                    s_tau_n, _, _, _ = traj[(tau + n) % t_max]
+                    s_tau_n = states[tau + n]
                     g += (gamma ** n) * v[s_tau_n]
 
-                s_tau, _, _, _ = traj[tau % t_max]
+                s_tau = states[tau]
                 v[s_tau] += alpha * (g - v[s_tau])
 
             if tau == t_terminal - 1:
@@ -437,25 +450,20 @@ def render_rmse(rmse: defaultdict, filename: str):
 if __name__ == '__main__':
 
     alpha = .01
-    epsilon = .05
-    n_trajectories = 10000
+    n_episodes = 10000
     n_steps = [1, 2, 3, 4, 5, 10]
 
     # create a model-free mdp to perform value prediction
     env = GeneralDeterministicGridWorldMDP(4, 4)
     behavior_policy = RandomPolicy(env.spec.num_actions)
 
-    # generate trajectories from behavior policy
-    trajs = generate_trajectories(env, behavior_policy, n_trajectories)
-
     # n-step td
 
-    print('\nn-step TD:\n')
+    print('\nn-step TD:')
 
     for n in n_steps:
-        print(f'\nNumber of steps: {n}, alpha: {alpha}, '
-              f'number of episodes/trajectories: {n_trajectories}:')
-        v = on_policy_n_step_td(env.spec, trajs, n, alpha, np.zeros(env.spec.num_states))
+        print(f'\nNumber of steps: {n}, alpha: {alpha}, number of episodes: {n_episodes}:')
+        v = on_policy_n_step_td(env.spec, behavior_policy, n_episodes, n, alpha, np.zeros(env.spec.num_states))
         print(f'\n{v}')
 
     q_star = np.array(
@@ -481,12 +489,11 @@ if __name__ == '__main__':
     print('\nn-step on-policy Sarsa:')
 
     epsilon = .1
-    n_trajectories = 50000
+    n_episodes = 50000
 
     for n in n_steps:
-        print(f'\nNumber of steps: {n}, epsilon: {epsilon}, alpha: {alpha}, '
-              f'number of episodes/trajectories: {n_trajectories}:')
-        q, rewards, lengths, rmse = on_policy_sarsa(env.spec, alpha, epsilon, n_trajectories, n,
+        print(f'\nNumber of steps: {n}, epsilon: {epsilon}, alpha: {alpha}, number of episodes: {n_episodes}:')
+        q, rewards, lengths, rmse = on_policy_sarsa(env.spec, alpha, epsilon, n_episodes, n,
                                                     np.zeros((env.spec.num_states, env.spec.num_actions)),
                                                     q_star)
         print(f'\n{q}')
@@ -494,14 +501,13 @@ if __name__ == '__main__':
 
     print('\nn-step tree backup:')
 
-    n_trajectories = 100000
+    n_episodes = 100000
     alpha = .005
-    n_steps = [1, 2, 3, 4, 5, 10]
 
     for n in n_steps:
         print(f'\nNumber of steps: {n}, alpha: {alpha}, '
-              f'number of episodes/trajectories: {n_trajectories}:')
-        q, rewards, lengths, rmse = tree_backup(env.spec, alpha, n_trajectories, n,
+              f'number of episodes: {n_episodes}:')
+        q, rewards, lengths, rmse = tree_backup(env.spec, alpha, n_episodes, n,
                                                 np.zeros((env.spec.num_states, env.spec.num_actions)),
                                                 q_star)
         print(f'\n{q}')
@@ -509,15 +515,16 @@ if __name__ == '__main__':
 
     # n-step off-policy sarsa
 
-    print('\nn-step off-policy Sarsa:\n')
+    print('\nn-step off-policy Sarsa:')
 
-    n_trajectories = 10000000
+    n_episodes = 1000000
     alpha = .001
     for n in n_steps:
+        num_episodes = int(n_episodes/n)
         print(f'\nNumber of steps: {n}, alpha: {alpha}, '
-              f'number of episodes/trajectories: {n_trajectories}:')
-        q, rewards, lengths, rmse = off_policy_sarsa(env.spec, alpha, n_trajectories, n, behavior_policy,
-                                                     np.random.normal(size=(env.spec.num_states, env.spec.num_actions)),
+              f'number of episodes: {num_episodes}:')
+        q, rewards, lengths, rmse = off_policy_sarsa(env.spec, alpha, num_episodes, n, behavior_policy,
+                                                     np.zeros((env.spec.num_states, env.spec.num_actions)),
                                                      q_star)
         print(f'\n{q}')
-        render_rmse(rmse, f"off_policy_sarsa_rmse_{n}")
+        render_rmse(rmse, f"off_policy_sarsa_rmse_{n}_{num_episodes}")
