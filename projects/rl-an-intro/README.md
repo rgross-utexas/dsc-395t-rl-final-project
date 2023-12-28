@@ -342,8 +342,6 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [ 0.          0.          0.          0.        ]]
 ```
 
-![](images/sarsa_0p5.png "Sarsa, epsilon=.5 (500 episode rolling average)")
-
 ##### State-action value (Q) prediction using $\epsilon=.1$:
 
 ```
@@ -364,8 +362,6 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [-1.86015548 -1.77914141 -1.         -1.46345584]
  [ 0.          0.          0.          0.        ]]
 ```
-
-![](images/sarsa_0p1.png "Sarsa, epsilon=.1 (500 episode rolling average)")
 
 ##### State-action value (Q) prediction using $\epsilon=.01$:
 
@@ -389,8 +385,6 @@ Off-policy action-state value prediction with weighted importance sampling from 
 
 ```
 
-![](images/sarsa_0p01.png "Sarsa, epsilon=.01 (500 episode rolling average)")
-
 ##### State-action value (Q) prediction using $\epsilon=.001$:
 
 ```
@@ -412,7 +406,7 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [ 0.          0.          0.          0.        ]]
 ```
 
-![](images/sarsa_0p001.png "Sarsa, epsilon=.001 (500 episode rolling average)")
+![](images/sarsa_by_epsilon.png "Sarsa by epsilon")
 
 ### Q-learning
 
@@ -439,8 +433,6 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [ 0.          0.          0.          0.        ]]
 ```
 
-![](images/q_learning_0p5.png "Q-learning, epsilon=.5 (500 episode rolling average)")
-
 ##### State-action value (Q) prediction using $\epsilon=.1$:
 
 ```
@@ -461,8 +453,6 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [-1.84416544 -1.88528071 -1.         -1.42289518]]
  [ 0.          0.          0.          0.        ]]
 ```
-
-![](images/q_learning_0p1.png "Q-learning, epsilon=.1 (500 episode rolling average)")
 
 ##### State-action value (Q) prediction using $\epsilon=.01$:
 
@@ -485,8 +475,6 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [ 0.          0.          0.          0.        ]]
 ```
 
-![](images/q_learning_0p01.png "Q-learning, epsilon=.01 (500 episode rolling average)")
-
 ##### State-action value (Q) prediction using $\epsilon=.001$:
 
 ```
@@ -508,7 +496,7 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [ 0.          0.          0.          0.        ]]
 ```
 
-![](images/q_learning_0p001.png "Q-learning, epsilon=.001 (500 episode rolling average)")
+![](images/q_learning_by_epsilon.png "Q-learning")
 
 ### Expected Sarsa
 
@@ -535,8 +523,6 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [ 0.          0.          0.          0.        ]]
 ```
 
-![](images/expected_sarsa_0p5.png "Expected Sarsa, epsilon=.5 (500 episode rolling average)")
-
 ##### State-action value (Q) prediction using $\epsilon=.1$:
 
 ```
@@ -557,8 +543,6 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [-1.85817029 -1.83243821 -1.         -1.46603761]
  [ 0.          0.          0.          0.        ]]
 ```
-
-![](images/expected_sarsa_0p1.png "Expected Sarsa, epsilon=.1 (500 episode rolling average)")
 
 ##### State-action value (Q) prediction using $\epsilon=.05$:
 
@@ -581,8 +565,6 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [ 0.          0.          0.          0.        ]]
 ```
 
-![](images/expected_sarsa_0p05.png "Expected Sarsa, epsilon=.05 (500 episode rolling average)")
-
 ##### State-action value (Q) prediction using $\epsilon=.05$:
 
 ```
@@ -603,8 +585,6 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [-1.48456209 -1.46865938 -1.         -1.24091684]
  [ 0.          0.          0.          0.        ]]
 ```
-
-![](images/expected_sarsa_0p01.png "Expected Sarsa, epsilon=.01 (500 episode rolling average)")
 
 ##### State-action value (Q) prediction using $\epsilon=.001$:
 
@@ -627,7 +607,7 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [ 0.          0.          0.          0.        ]]
 ```
 
-![](images/expected_sarsa_0p001.png "Expected Sarsa, epsilon=.001 (500 episode rolling average)")
+![](images/expected_sarsa_by_epsilon.png "Expected Sarsa")
 
 ### Double Q-learning
 
@@ -654,8 +634,6 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [ 0.          0.          0.          0.        ]]
 ```
 
-![](images/double_q_learning_0p5.png "Double Q-learning, epsilon=.5 (500 episode rolling average)")
-
 ##### State-action value (Q) prediction using $\epsilon=.1$:
 
 ```
@@ -676,8 +654,6 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [-1.43242436 -1.36496915 -0.99999627 -1.19300976]
  [ 0.          0.          0.          0.        ]]
 ```
-
-![](images/double_q_learning_0p1.png "Double Q-learning, epsilon=.1 (500 episode rolling average)")
 
 ##### State-action value (Q) prediction using $\epsilon=.05$:
 
@@ -700,8 +676,6 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [ 0.          0.          0.          0.        ]]
 ```
 
-![](images/double_q_learning_0p05.png "Double Q-learning, epsilon=.05 (500 episode rolling average)")
-
 ##### State-action value (Q) prediction using $\epsilon=.01$:
 
 ```
@@ -722,8 +696,6 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [-1.19003593 -1.17110535 -0.99999656 -1.07872134]
  [ 0.          0.          0.          0.        ]]
 ```
-
-![](images/double_q_learning_0p01.png "Double Q-learning, epsilon=.01 (500 episode rolling average)")
 
 ##### State-action value (Q) prediction using $\epsilon=.001$:
 
@@ -746,47 +718,21 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [ 0.          0.          0.          0.        ]]
 ```
 
-![](images/double_q_learning_0p001.png "Double Q-learning, epsilon=.001 (500 episode rolling average)")
+![](images/double_q_learning_by_epsilon.png "Double Q-learning")
 
 ### Cliff Walking
 
 #### $4 \times 12$, starting state is in the lower-left and the goal/terminal state is in the lower-right
 
-#### Sarsa vs Q-learning vs Expected Sarsa
+#### Sarsa vs Q-learning vs Expected Sarsa vs Double Q-learning
 
-##### alpha=.5, epsilon=.1, episode rolling average=25
+##### alpha=.5, epsilon=.1, episode rolling average=25, random initialization
 
-##### Sarsa (random initialization)
+![](images/cliff_walking_random_init.png)
 
-![](images/cliff_walking_sarsa_random_init.png)
+##### alpha=.5, epsilon=.1, episode rolling average=25, random initialization
 
-##### Q-learning (random initialization)
-
-![](images/cliff_walking_q_learning_random_init.png)
-
-##### Expected Sarsa (random initialization)
-
-![](images/cliff_walking_expected_sarsa_random_init.png)
-
-##### Double Q-learning (random initialization)
-
-![](images/cliff_walking_double_q_learning_random_init.png)
-
-##### Sarsa (zero initialization)
-
-![](images/cliff_walking_sarsa_zero_init.png)
-
-##### Q-learning (zero initialization)
-
-![](images/cliff_walking_q_learning_zero_init.png)
-
-##### Expected Sarsa (zero initialization)
-
-![](images/cliff_walking_expected_sarsa_zero_init.png)
-
-##### Double Q-learning (zero initialization)
-
-![](images/cliff_walking_double_q_learning_zero_init.png)
+![](images/cliff_walking_zero_init.png)
 
 ## N-step Bootstrapping
 
@@ -987,11 +933,11 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [ 0.          0.          0.          0.        ]]
 ```
 
-![](images/on_policy_sarsa_by_number_of_steps.png)
+![](images/on_policy_n_step_sarsa_by_number_of_steps.png)
 
 #### Using a constant number of steps = 3, Sarsa was run with various epsilons
 
-![](images/on_policy_sarsa_by_epsilon.png)
+![](images/on_policy_n_step_sarsa_by_epsilon.png)
 
 ### N-step Tree Backup with various number of steps
 
@@ -1123,11 +1069,11 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [  0.           0.           0.           0.        ]]
 ```
 
-![](images/tree_backup_by_number_of_steps.png)
+![](images/n_step_tree_backup_by_number_of_steps.png)
 
 #### Using a constant number of steps = 3, Tree Backup was run with various behavior policy epsilons
 
-![](images/tree_backup_by_bpi_epsilon.png)
+![](images/n_step_tree_backup_by_bpi_epsilon.png)
 
 ### N-step Off-policy Sarsa with various number of steps
 
@@ -1259,8 +1205,8 @@ Off-policy action-state value prediction with weighted importance sampling from 
  [ 0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00]]
 ```
 
-![](images/off_policy_sarsa_by_number_of_steps.png)
+![](images/off_policy_n_step_sarsa_by_number_of_steps.png)
 
 #### Using a constant number of steps = 3, Off-policy Sarsa was run with various behavior policy epsilons
 
-![](images/off_policy_sarsa_by_bpi_epsilon.png)
+![](images/off_policy_n_step_sarsa_by_bpi_epsilon.png)

@@ -1,3 +1,5 @@
+from typing import Dict, Tuple
+
 import numpy as np
 
 from .env import Env, EnvSpec, EnvWithModel
@@ -18,37 +20,37 @@ class GridWorldMDP(Env):
 
         super().__init__(env_spec)
 
-        self.num_states = num_states
+        self._num_states = num_states
         self._state = None
-        self.final_state = 0
-        self.trans_mat = self._build_trans_mat()
-        self.r_mat = self._build_r_mat()
+        self._final_state = 0
+        self._trans_mat = self._build_trans_mat()
+        self._r_mat = self._build_r_mat()
 
-    def reset(self):
-        self._state = np.random.choice(range(1, self.num_states))
-        return self._state
+    def reset(self) -> Tuple[int, Dict]:
+        self._state = np.random.choice(range(1, self._num_states))
+        return self._state, {'prob': 1}
 
-    def step(self, action):
+    def step(self, action: int) -> Tuple[int, int, bool, bool, Dict]:
         assert action in list(range(self.spec.num_actions)), "Invalid Action"
-        assert self._state != self.final_state, "Episode has ended!"
+        assert self._state != self._final_state, "Episode has ended!"
 
         prev_state = self._state
-        self._state = np.random.choice(self.spec.num_states, p=self.trans_mat[self._state, action])
-        r = self.r_mat[prev_state, action, self._state]
+        self._state = np.random.choice(self.spec.num_states, p=self._trans_mat[self._state, action])
+        r = self._r_mat[prev_state, action, self._state]
 
-        return self._state, r, self._state == self.final_state
+        return self._state, r, self._state == self._final_state, False, {}
 
     def _build_trans_mat(self) -> np.array:
         raise NotImplementedError("_build_trans_mat")
 
     def _build_r_mat(self) -> np.array:
-        r_mat = np.zeros((self.num_states, ActionConstants.NUM_ACTIONS, self.num_states))
+        r_mat = np.zeros((self._num_states, ActionConstants.NUM_ACTIONS, self._num_states))
 
         # initialize all rewards to -1
         r_mat[:, :, :] = -1.
 
         # except the final state, which is 0
-        r_mat[self.final_state, :, :] = 0.
+        r_mat[self._final_state, :, :] = 0.
 
         return r_mat
 
@@ -91,11 +93,11 @@ class GeneralGridWorldMDP(Env):
         self._td = self._build_trans_mat()
         self._r = self._build_r_mat()
 
-    def reset(self):
+    def reset(self) -> Tuple[int, Dict]:
         self._state = np.random.choice(range(1, self._num_states))
-        return self._state
+        return self._state, {'prob': 1}
 
-    def step(self, action):
+    def step(self, action: int) -> Tuple[int, int, bool, bool, Dict]:
         assert action in list(range(self.spec.num_actions)), "Invalid Action"
         assert self._state != self._final_state, "Episode has ended!"
 
@@ -103,7 +105,7 @@ class GeneralGridWorldMDP(Env):
         self._state = np.random.choice(self.spec.num_states, p=self._td[self._state, action])
         r = self._r[prev_state, action, self._state]
 
-        return self._state, r, self.is_terminal(self._state)
+        return self._state, r, self.is_terminal(self._state), False, {}
 
     def is_terminal(self, state):
         return state == self._final_state

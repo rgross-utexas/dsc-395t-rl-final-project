@@ -98,6 +98,10 @@ class EGreedyPolicy(Policy):
         if np.random.random_sample() < self.epsilon:
             return np.random.choice(self.p.shape[1])
         else:
+
+            if isinstance(state, tuple):
+                state = state[0]
+
             probs = self.p[state]
             return int(np.random.choice(np.flatnonzero(probs == probs.max())))
 
