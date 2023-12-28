@@ -2,6 +2,7 @@ import random
 from collections import defaultdict
 from typing import Dict, Iterable, Optional, Tuple
 
+import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -16,10 +17,10 @@ INFINITY = 10e10
 
 
 def td_0_prediction(
-        env_spec: EnvSpec,
         trajs: Iterable[Iterable[Tuple[int, int, int, int]]],
         alpha: float,
-        init_v: np.array
+        init_v: np.array,
+        gamma: float
 ) -> np.array:
     """
     input:
@@ -33,7 +34,6 @@ def td_0_prediction(
     """
 
     v = init_v.copy()
-    gamma = env_spec.gamma
 
     for traj in trajs:
         for t, (s_t, a_t, r_t1, s_t1) in enumerate(traj):
@@ -43,11 +43,12 @@ def td_0_prediction(
 
 
 def sarsa(
-        env_spec: EnvSpec,
+        env,
         alpha: float,
         epsilon: float,
         num_episodes: int,
-        init_q: np.array
+        init_q: np.array,
+        gamma: float
 ) -> Tuple[np.array, defaultdict, defaultdict]:
     """
     input:
@@ -67,8 +68,6 @@ def sarsa(
     # this is on-policy so create a policy backed by q
     pi = EGreedyPolicy(q, epsilon)
 
-    gamma = env_spec.gamma
-
     # track the length and rewards for each episode
     episode_lengths = defaultdict(float)
     episode_rewards = defaultdict(float)
@@ -79,16 +78,16 @@ def sarsa(
 
         # get the initial state
         s_t = env.reset()
+        s_t = s_t[0]
 
         # choose an action
         a_t = pi.action(s_t)
 
-        # check if this is a terminal state
-        done = env.is_terminal(s_t)
+        done = False
 
         while not done:
             # take a step
-            s_t1, r_t1, done = env.step(a_t)
+            s_t1, r_t1, done, _, _ = env.step(a_t)
 
             # for sarsa we want the action for the next state
             a_t1 = pi.action(s_t1)
@@ -110,11 +109,13 @@ def sarsa(
 
 
 def expected_sarsa(
-        env_spec: EnvSpec,
+        env,
         alpha: float,
         epsilon: float,
         num_episodes: int,
-        init_q: np.array
+        num_actions: int,
+        init_q: np.array,
+        gamma: float
 ) -> Tuple[np.array, defaultdict, defaultdict]:
     """
     args:
@@ -131,7 +132,6 @@ def expected_sarsa(
 
     q = init_q.copy()
     pi = EGreedyPolicy(q, epsilon)
-    gamma = env_spec.gamma
 
     # track the length and rewards for each episode
     episode_lengths = defaultdict(float)
@@ -143,22 +143,22 @@ def expected_sarsa(
 
         # get the initial state
         s_t = env.reset()
+        s_t = s_t[0]
 
         # choose an action
         a_t = pi.action(s_t)
 
-        # check if this is a terminal state
-        done = env.is_terminal(s_t)
+        done = False
 
         while not done:
             # take a step
-            s_t1, r_t1, done = env.step(a_t)
+            s_t1, r_t1, done, _, _ = env.step(a_t)
 
             # for sarsa we want the action for the next state
             a_t1 = pi.action(s_t1)
 
             expected_value = 0.
-            for a in range(env_spec.num_actions):
+            for a in range(num_actions):
                 expected_value += pi.action_prob(s_t1, a) * q[s_t1, a]
 
             # update rule
@@ -178,11 +178,12 @@ def expected_sarsa(
 
 
 def q_learning(
-        env_spec: EnvSpec,
+        env,
         alpha: float,
         epsilon: float,
         num_episodes: int,
-        init_q: np.array
+        init_q: np.array,
+        gamma: float = 1.
 ) -> Tuple[np.array, defaultdict, defaultdict]:
     """
     args:
@@ -199,7 +200,6 @@ def q_learning(
 
     q = init_q.copy()
     pi = EGreedyPolicy(q, epsilon)
-    gamma = env_spec.gamma
 
     # track the length and rewards for each episode
     episode_lengths = defaultdict(float)
@@ -211,16 +211,16 @@ def q_learning(
 
         # get the initial state
         s_t = env.reset()
+        s_t = s_t[0]
 
-        # check if this is a terminal state
-        done = env.is_terminal(s_t)
+        done = False
 
         while not done:
             # choose an action
             a_t = pi.action(s_t)
 
             # take a step
-            s_t1, r_t1, done = env.step(a_t)
+            s_t1, r_t1, done, _, _ = env.step(a_t)
 
             # update rule
             q[s_t, a_t] += alpha * (r_t1 + gamma * np.max(q[s_t1]) - q[s_t, a_t])
@@ -238,11 +238,12 @@ def q_learning(
 
 
 def double_q_learning(
-        env_spec: EnvSpec,
+        env,
         alpha: float,
         epsilon: float,
         num_episodes: int,
-        init_q: np.array
+        init_q: np.array,
+        gamma: float = 1.
 ) -> Tuple[np.array, defaultdict, defaultdict]:
     """
     args:
@@ -260,7 +261,6 @@ def double_q_learning(
     q1 = init_q.copy()
     q2 = init_q.copy()
     pi = DoubleEGreedyPolicy(q1, q2, epsilon)
-    gamma = env_spec.gamma
 
     # track the length and rewards for each episode
     episode_lengths = defaultdict(float)
@@ -272,9 +272,10 @@ def double_q_learning(
 
         # get the initial state
         s_t = env.reset()
+        s_t = s_t[0]
 
         # check if this is a terminal state
-        done = env.is_terminal(s_t)
+        done = False
 
         while not done:
 
@@ -282,7 +283,7 @@ def double_q_learning(
             a_t = pi.action(s_t)
 
             # take a step
-            s_t1, r_t1, done = env.step(a_t)
+            s_t1, r_t1, done, _, _ = env.step(a_t)
 
             # update rule
             if random.random() >= .5:
@@ -378,7 +379,7 @@ if __name__ == '__main__':
 
     # generate multiple value predictions using various alphas
     for alpha in alphas:
-        v = td_0_prediction(env.spec, trajs, alpha, np.zeros(env.spec.num_states))
+        v = td_0_prediction(trajs, alpha, np.zeros(env.spec.num_states), 1.)
         print(f'TD(0) value prediction with {alpha=}, {n_trajectories=}, v={v}')
 
     # sarsa
@@ -387,9 +388,9 @@ if __name__ == '__main__':
 
     data = {}
     for epsilon in epsilons:
-        q, rewards, lengths = sarsa(env.spec, .001, epsilon,
-                                    n_trajectories,
-                                    np.zeros((env.spec.num_states, env.spec.num_actions)))
+        q, rewards, lengths = sarsa(env,.001, epsilon, n_trajectories,
+                                    np.zeros((env.spec.num_states, env.spec.num_actions)),
+                                    1.)
         print(f'q={q}')
 
         data[epsilon] = {'r': rewards, 'l': lengths}
@@ -402,9 +403,10 @@ if __name__ == '__main__':
 
     data = {}
     for epsilon in epsilons:
-        q, rewards, lengths = q_learning(env.spec, .001, epsilon,
+        q, rewards, lengths = q_learning(env, .001, epsilon,
                                          n_trajectories,
-                                         np.zeros((env.spec.num_states, env.spec.num_actions)))
+                                         np.zeros((env.spec.num_states, env.spec.num_actions)),
+                                         .1)
         print(f'q={q}')
 
         data[epsilon] = {'r': rewards, 'l': lengths}
@@ -417,9 +419,10 @@ if __name__ == '__main__':
 
     data = {}
     for epsilon in epsilons:
-        q, rewards, lengths = expected_sarsa(env.spec, .001, epsilon,
-                                             n_trajectories,
-                                             np.zeros((env.spec.num_states, env.spec.num_actions)))
+        q, rewards, lengths = expected_sarsa(env, .001, epsilon,
+                                             n_trajectories, env.spec.num_actions,
+                                             np.zeros((env.spec.num_states, env.spec.num_actions)),
+                                             1.)
         print(f'q={q}')
 
         data[epsilon] = {'r': rewards, 'l': lengths}
@@ -432,9 +435,10 @@ if __name__ == '__main__':
 
     data = {}
     for epsilon in epsilons:
-        q, rewards, lengths = double_q_learning(env.spec, .001, epsilon,
+        q, rewards, lengths = double_q_learning(env, .001, epsilon,
                                                 n_trajectories,
-                                                np.zeros((env.spec.num_states, env.spec.num_actions)))
+                                                np.zeros((env.spec.num_states, env.spec.num_actions)),
+                                                1.)
         print(f'q={q}')
         data[epsilon] = {'r': rewards, 'l': lengths}
 
@@ -444,14 +448,11 @@ if __name__ == '__main__':
 
     # create a cliff walking env
 
+    env = gym.make('CliffWalking-v0')
+
     print('Cliff Walking:')
 
     # TODO: Refactor this to something general
-
-    start_state = 36
-    goal_state = 47
-    cliff_states = list(range(37, 47))
-    env = CliffWalkingMDP(12, 4, cliff_states, start_state, goal_state)
 
     epsilon = .1
     alpha = .5
@@ -461,45 +462,53 @@ if __name__ == '__main__':
 
     data = {}
 
-    q, rewards, lengths = sarsa(env.spec, alpha, epsilon, num_episodes,
-                                np.random.normal(size=(env.spec.num_states, env.spec.num_actions)))
+    q, rewards, lengths = sarsa(env, alpha, epsilon, num_episodes,
+                                np.random.normal(size=(env.observation_space.n, env.action_space.n)),
+                                gamma=1.)
 
     data['sarsa'] = {'r': rewards, 'l': lengths}
 
-    q, rewards, lengths = q_learning(env.spec, alpha, epsilon, num_episodes,
-                                     np.random.normal(size=(env.spec.num_states, env.spec.num_actions)))
+    q, rewards, lengths = q_learning(env, alpha, epsilon, num_episodes,
+                                     np.random.normal(size=(env.observation_space.n, env.action_space.n)),
+                                     gamma=1.)
 
     data['q-learning'] = {'r': rewards, 'l': lengths}
 
-    q, rewards, lengths = expected_sarsa(env.spec, alpha, epsilon, num_episodes,
-                                     np.random.normal(size=(env.spec.num_states, env.spec.num_actions)))
+    q, rewards, lengths = expected_sarsa(env, alpha, epsilon, num_episodes, env.action_space.n,
+                                     np.random.normal(size=(env.observation_space.n, env.action_space.n)),
+                                     gamma=1.)
     data['expected-sarsa'] = {'r': rewards, 'l': lengths}
 
-    q, rewards, lengths = double_q_learning(env.spec, alpha, epsilon, num_episodes,
-                                            np.random.normal(size=(env.spec.num_states, env.spec.num_actions)))
+    q, rewards, lengths = double_q_learning(env, alpha, epsilon, num_episodes,
+                                            np.random.normal(size=(env.observation_space.n, env.action_space.n)),
+                                            gamma=1.)
     data['double-q-learning'] = {'r': rewards, 'l': lengths}
 
     render_figure(data, window, 'algorithm', 'cliff_walking_random_init')
 
     data = {}
 
-    q, rewards, lengths = sarsa(env.spec, alpha, epsilon, num_episodes,
-                                np.zeros((env.spec.num_states, env.spec.num_actions)))
+    q, rewards, lengths = sarsa(env, alpha, epsilon, num_episodes,
+                                np.zeros((env.observation_space.n, env.action_space.n)),
+                                gamma=1.)
 
     data['sarsa'] = {'r': rewards, 'l': lengths}
 
-    q, rewards, lengths = q_learning(env.spec, alpha, epsilon, num_episodes,
-                                     np.zeros((env.spec.num_states, env.spec.num_actions)))
+    q, rewards, lengths = q_learning(env, alpha, epsilon, num_episodes,
+                                     np.zeros((env.observation_space.n, env.action_space.n)),
+                                     gamma=1.)
 
     data['q-learning'] = {'r': rewards, 'l': lengths}
 
-    q, rewards, lengths = expected_sarsa(env.spec, alpha, epsilon, num_episodes,
-                                         np.zeros((env.spec.num_states, env.spec.num_actions)))
+    q, rewards, lengths = expected_sarsa(env, alpha, epsilon, num_episodes, env.action_space.n,
+                                         np.zeros((env.observation_space.n, env.action_space.n)),
+                                         gamma=1.)
 
     data['expected-sarsa'] = {'r': rewards, 'l': lengths}
 
-    q, rewards, lengths = double_q_learning(env.spec, alpha, epsilon, num_episodes,
-                                            np.zeros((env.spec.num_states, env.spec.num_actions)))
+    q, rewards, lengths = double_q_learning(env, alpha, epsilon, num_episodes,
+                                            np.zeros((env.observation_space.n, env.action_space.n)),
+                                            gamma=1.)
 
     data['double-q-learning'] = {'r': rewards, 'l': lengths}
 

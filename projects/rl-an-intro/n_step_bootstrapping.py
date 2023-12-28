@@ -15,12 +15,13 @@ INFINITY = 10e10
 
 
 def on_policy_n_step_td(
-        env_spec: EnvSpec,
+        env,
         pi: Policy,
         num_episodes: int,
         n: int,
         alpha: float,
-        init_v: np.array
+        gamma: float = 1.,
+        init_v: np.array = None
 ) -> Tuple[np.array]:
     """
     input:
@@ -35,7 +36,6 @@ def on_policy_n_step_td(
     """
 
     v = init_v.copy()
-    gamma = env_spec.gamma
 
     for e in tqdm(range(num_episodes)):
 
@@ -47,6 +47,7 @@ def on_policy_n_step_td(
 
         # get the initial state
         s_t = env.reset()
+        s_t = s_t[0]
         states.append(s_t)
 
         # give a reward of 0 for time 0
@@ -57,7 +58,7 @@ def on_policy_n_step_td(
             # get the data from the trajectory for time t
             if not env.is_terminal(s_t):
 
-                s_t1, r_t1, done = env.step(pi.action(s_t))
+                s_t1, r_t1, done, _, _ = env.step(pi.action(s_t))
                 states.append(s_t1)
                 rewards.append(r_t1)
 
@@ -90,12 +91,13 @@ def on_policy_n_step_td(
 
 
 def on_policy_sarsa(
-        env_spec: EnvSpec,
+        env,
         alpha: float,
         num_episodes: int,
         n: int,
-        init_q: np.array,
         epsilon: float = .01,
+        gamma: float = 1.,
+        init_q: np.array = None,
         q_star: Optional[np.array] = None
 ) -> Tuple[np.array, defaultdict, defaultdict, defaultdict]:
     """
@@ -116,7 +118,6 @@ def on_policy_sarsa(
 
     # this is on-policy so create a policy backed by q
     pi = EGreedyPolicy(q, epsilon)
-    gamma = env_spec.gamma
 
     # track the length and rewards for each episode
     episode_lengths = defaultdict(float)
@@ -134,6 +135,7 @@ def on_policy_sarsa(
 
         # get the initial state
         s_t = env.reset()
+        s_t = s_t[0]
         states.append(s_t)
 
         # choose an action
@@ -148,7 +150,7 @@ def on_policy_sarsa(
             if t < t_terminal:
 
                 # take a step based on the action
-                s_t1, r_t1, done = env.step(a_t)
+                s_t1, r_t1, done, _, _ = env.step(a_t)
                 states.append(s_t1)
                 rewards.append(r_t1)
                 episode_rewards[e] += r_t1
@@ -200,13 +202,14 @@ def on_policy_sarsa(
 
 
 def off_policy_sarsa(
-        env_spec: EnvSpec,
+        env,
         alpha: float,
         num_episodes: int,
         n: int,
-        init_q: np.array,
         tpi_epsilon: float = .0, # default to greedy
         bpi_epsilon: float = .3,
+        gamma: float = 1.,
+        init_q: np.array = None,
         q_star: Optional[np.array] = None
 ) -> Tuple[np.array, defaultdict, defaultdict, defaultdict]:
     """
@@ -231,8 +234,6 @@ def off_policy_sarsa(
     # this is the (more greedy) target policy
     tpi = EGreedyPolicy(q, tpi_epsilon)
 
-    gamma = env_spec.gamma
-
     # track the length and rewards for each episode
     episode_lengths = defaultdict(float)
     episode_rewards = defaultdict(float)
@@ -249,6 +250,7 @@ def off_policy_sarsa(
 
         # get the initial state
         s_t = env.reset()
+        s_t = s_t[0]
         states.append(s_t)
 
         # choose an action
@@ -263,7 +265,7 @@ def off_policy_sarsa(
             if t < t_terminal:
 
                 # take a step based on the action
-                s_t1, r_t1, done = env.step(a_t)
+                s_t1, r_t1, done, _, _ = env.step(a_t)
                 states.append(s_t1)
                 rewards.append(r_t1)
                 episode_rewards[e] += r_t1
@@ -323,13 +325,15 @@ def off_policy_sarsa(
 
 
 def tree_backup(
-        env_spec: EnvSpec,
+        env,
         alpha: float,
         num_episodes: int,
+        num_actions: int,
         n: int,
-        init_q: np.array,
         tpi_epsilon: float = .0, # default to greedy
         bpi_epsilon: float = .01,
+        gamma: float = 1.,
+        init_q: np.array = None,
         q_star: Optional[np.array] = None
 ) -> Tuple[np.array, defaultdict, defaultdict, defaultdict]:
     """
@@ -354,8 +358,6 @@ def tree_backup(
     # this is the (more greedy) target policy
     tpi = EGreedyPolicy(q, tpi_epsilon)
 
-    gamma = env_spec.gamma
-
     # track the length and rewards for each episode
     episode_lengths = defaultdict(float)
     episode_rewards = defaultdict(float)
@@ -372,6 +374,7 @@ def tree_backup(
 
         # get the initial state
         s_t = env.reset()
+        s_t = s_t[0]
         states.append(s_t)
 
         # take an off-policy action
@@ -386,7 +389,7 @@ def tree_backup(
             if t < t_terminal:
 
                 # take a step based on the action
-                s_t1, r_t1, done = env.step(a_t)
+                s_t1, r_t1, done, _, _ = env.step(a_t)
                 states.append(s_t1)
                 rewards.append(r_t1)
                 episode_rewards[e] += r_t1
@@ -406,7 +409,7 @@ def tree_backup(
                     g = rewards[t_terminal]
                 else:
                     e_sa = 0.
-                    for a in range(env_spec.num_actions):
+                    for a in range(num_actions):
                         e_sa += tpi.action_prob(s_t1, a) * q[s_t1, a]
 
                     g = rewards[t + 1] + gamma * e_sa
@@ -417,7 +420,7 @@ def tree_backup(
                     a_k = actions[k]
 
                     e_sa = 0.
-                    for a in range(env_spec.num_actions):
+                    for a in range(num_actions):
                         if a != a_k:
                             e_sa += tpi.action_prob(s_k, a) * q[s_k, a]
                         else:
@@ -535,6 +538,7 @@ if __name__ == '__main__':
     n_steps = [1, 2, 3, 4, 5, 10]
     alpha = .01
     epsilons = [.01, .05, .1, .2, .3, .4, .5]
+    gamma = 1.
 
     # create a model-free mdp to perform value prediction
     env = GeneralDeterministicGridWorldMDP(4, 4)
@@ -546,7 +550,8 @@ if __name__ == '__main__':
 
     for n in n_steps:
         print(f'\nNumber of steps: {n}, alpha: {alpha}, number of episodes: {n_episodes}:')
-        v = on_policy_n_step_td(env.spec, behavior_policy, n_episodes, n, alpha, np.zeros(env.spec.num_states))
+        v = on_policy_n_step_td(env, behavior_policy, n_episodes, n, alpha, gamma,
+                                np.zeros(env.spec.num_states))
         print(f'\n{v}')
 
     q_star = np.array(
@@ -576,9 +581,8 @@ if __name__ == '__main__':
     data = {}
     for n in n_steps:
         print(f'\nNumber of steps: {n}, epsilon: {epsilon}, alpha: {alpha}, number of episodes: {n_episodes}:')
-        q, rewards, lengths, rmse = on_policy_sarsa(env.spec, alpha, n_episodes, n,
+        q, rewards, lengths, rmse = on_policy_sarsa(env, alpha, n_episodes, n, epsilon, gamma,
                                                     np.zeros((env.spec.num_states, env.spec.num_actions)),
-                                                    epsilon=epsilon,
                                                     q_star=q_star)
         print(f'\n{q}')
 
@@ -591,9 +595,8 @@ if __name__ == '__main__':
     data = {}
     for epsilon in epsilons:
         print(f'\nNumber of steps: {n}, epsilon: {epsilon}, alpha: {alpha}, number of episodes: {n_episodes}:')
-        q, rewards, lengths, rmse = on_policy_sarsa(env.spec, alpha, n_episodes, n,
+        q, rewards, lengths, rmse = on_policy_sarsa(env, alpha, n_episodes, n, epsilon, gamma,
                                                     np.zeros((env.spec.num_states, env.spec.num_actions)),
-                                                    epsilon=epsilon,
                                                     q_star=q_star)
         data[epsilon] = {'r': rewards, 'l': lengths}
 
@@ -605,8 +608,8 @@ if __name__ == '__main__':
     for n in n_steps:
         print(f'\nNumber of steps: {n}, alpha: {alpha}, '
               f'number of episodes: {n_episodes}:')
-        q, rewards, lengths, rmse = tree_backup(env.spec, alpha, n_episodes, n,
-                                                np.zeros((env.spec.num_states, env.spec.num_actions)),
+        q, rewards, lengths, rmse = tree_backup(env, alpha, n_episodes, env.spec.num_actions, n, gamma=gamma,
+                                                init_q=np.zeros((env.spec.num_states, env.spec.num_actions)),
                                                 q_star=q_star)
         print(f'\n{q}')
 
@@ -620,8 +623,8 @@ if __name__ == '__main__':
     for bpi_epsilon in epsilons:
         print(f'\nNumber of steps: {n}, alpha: {alpha}, behavior policy epsilon: {bpi_epsilon}, '
               f'number of episodes: {n_episodes}:')
-        q, rewards, lengths, rmse = tree_backup(env.spec, alpha, n_episodes, n,
-                                                np.zeros((env.spec.num_states, env.spec.num_actions)),
+        q, rewards, lengths, rmse = tree_backup(env, alpha, n_episodes, env.spec.num_actions, n, gamma=gamma,
+                                                init_q=np.zeros((env.spec.num_states, env.spec.num_actions)),
                                                 bpi_epsilon=bpi_epsilon,
                                                 q_star=q_star)
         data[bpi_epsilon] = {'r': rewards, 'l': lengths}
@@ -636,8 +639,8 @@ if __name__ == '__main__':
     for n in n_steps:
         print(f'\nNumber of steps: {n}, alpha: {alpha}, '
               f'number of episodes: {n_episodes}:')
-        q, rewards, lengths, rmse = off_policy_sarsa(env.spec, alpha, n_episodes, n,
-                                                     np.zeros((env.spec.num_states, env.spec.num_actions)),
+        q, rewards, lengths, rmse = off_policy_sarsa(env, alpha, n_episodes, n, gamma=gamma,
+                                                     init_q=np.zeros((env.spec.num_states, env.spec.num_actions)),
                                                      q_star=q_star)
         print(f'\n{q}')
 
@@ -655,8 +658,8 @@ if __name__ == '__main__':
     for bpi_epsilon in epsilons:
         print(f'\nNumber of steps: {n}, alpha: {alpha}, behavior policy epsilon: {bpi_epsilon}, '
               f'number of episodes: {n_episodes}:')
-        q, rewards, lengths, rmse = off_policy_sarsa(env.spec, alpha, n_episodes, n,
-                                                     np.zeros((env.spec.num_states, env.spec.num_actions)),
+        q, rewards, lengths, rmse = off_policy_sarsa(env, alpha, n_episodes, n, gamma=gamma,
+                                                     init_q=np.zeros((env.spec.num_states, env.spec.num_actions)),
                                                      bpi_epsilon=bpi_epsilon,
                                                      q_star=q_star)
         data[bpi_epsilon] = {'r': rewards, 'l': lengths}
