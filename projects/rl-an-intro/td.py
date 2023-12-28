@@ -1,6 +1,6 @@
 import random
 from collections import defaultdict
-from typing import Iterable, Optional, Tuple
+from typing import Dict, Iterable, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -337,16 +337,41 @@ def render(lengths: defaultdict, rewards: defaultdict, epsilon: float,
     plt.savefig(filename_template.format(epsilon=epsilon).replace('.', 'p'))
 
 
+def render_figure(data: Dict, window: int, label: str, filename: str):
+
+    # render the figure and write it to file
+    fig, axes = plt.subplots(2, 1)
+    fig.set_figwidth(12)
+    fig.set_figheight(12)
+
+    for n, data in data.items():
+
+        rewards = pd.Series(data['r'].values()).rolling(window, min_periods=window).mean().to_numpy()
+        lengths = pd.Series(data['l'].values()).rolling(window, min_periods=window).mean().to_numpy()
+
+        axes[0].plot(rewards, label=f'{label}={n}')
+        axes[1].plot(lengths, label=f'{label}={n}')
+
+    axes[0].legend(loc='lower right')
+    axes[0].title.set_text(f"Reward per Episode Over Time ({window} step rolling average)")
+    axes[1].legend(loc='upper right')
+    axes[1].title.set_text(f"Episode Length Over Time ({window} step rolling average)")
+
+    plt.savefig(filename)
+
+
 if __name__ == '__main__':
 
-    rolling_window = 500
+    window = 100
     alphas = [.5, .1, .05, .01, .05, .001]
-    epsilons = [.5, .1, .01, .05, .001]
-    n_trajectories = 100000
+    epsilons = [.001, .005, .01, .05, .1, .5]
+    n_trajectories = 50000
 
     # create a model-free mdp to perform value prediction
     env = GeneralDeterministicGridWorldMDP(4, 4)
     behavior_policy = RandomPolicy(env.spec.num_actions)
+
+    print('TD(0):')
 
     # generate trajectories from behavior policy
     trajs = generate_trajectories(env, behavior_policy, n_trajectories)
@@ -354,51 +379,72 @@ if __name__ == '__main__':
     # generate multiple value predictions using various alphas
     for alpha in alphas:
         v = td_0_prediction(env.spec, trajs, alpha, np.zeros(env.spec.num_states))
-        print(f'TD(0) value prediction with {alpha=}, {n_trajectories=}, {v=}')
+        print(f'TD(0) value prediction with {alpha=}, {n_trajectories=}, v={v}')
 
     # sarsa
 
+    print('Sarsa:')
+
+    data = {}
     for epsilon in epsilons:
         q, rewards, lengths = sarsa(env.spec, .001, epsilon,
                                     n_trajectories,
                                     np.zeros((env.spec.num_states, env.spec.num_actions)))
-        print(f'{q=}')
-        render(lengths, rewards, epsilon, 'sarsa_{epsilon}',
-               rolling_window=rolling_window)
+        print(f'q={q}')
+
+        data[epsilon] = {'r': rewards, 'l': lengths}
+
+    render_figure(data, window, 'epsilon', 'sarsa_by_epsilon')
 
     # q-learning
 
+    print('Q-Learning:')
+
+    data = {}
     for epsilon in epsilons:
         q, rewards, lengths = q_learning(env.spec, .001, epsilon,
                                          n_trajectories,
                                          np.zeros((env.spec.num_states, env.spec.num_actions)))
-        print(f'{q=}')
-        render(lengths, rewards, epsilon, 'q_learning_{epsilon}',
-               rolling_window=rolling_window)
+        print(f'q={q}')
+
+        data[epsilon] = {'r': rewards, 'l': lengths}
+
+    render_figure(data, window, 'epsilon', 'q_learning_by_epsilon')
 
     # expected sarsa
 
+    print('Expected Sarsa:')
+
+    data = {}
     for epsilon in epsilons:
         q, rewards, lengths = expected_sarsa(env.spec, .001, epsilon,
                                              n_trajectories,
                                              np.zeros((env.spec.num_states, env.spec.num_actions)))
-        print(f'{q=}')
-        render(lengths, rewards, epsilon, 'expected_sarsa_{epsilon}',
-               rolling_window=rolling_window)
+        print(f'q={q}')
+
+        data[epsilon] = {'r': rewards, 'l': lengths}
+
+    render_figure(data, window, 'epsilon', 'expected_sarsa_by_epsilon')
 
     # double q-learning
 
+    print('Double Q-Learning:')
+
+    data = {}
     for epsilon in epsilons:
         q, rewards, lengths = double_q_learning(env.spec, .001, epsilon,
                                                 n_trajectories,
                                                 np.zeros((env.spec.num_states, env.spec.num_actions)))
-        print(f'{q=}')
-        render(lengths, rewards, epsilon, 'double_q_learning{epsilon}',
-               rolling_window=rolling_window)
+        print(f'q={q}')
+        data[epsilon] = {'r': rewards, 'l': lengths}
+
+    render_figure(data, window, 'epsilon', 'double_q_learning_by_epsilon')
 
     rolling_window = 25
 
     # create a cliff walking env
+
+    print('Cliff Walking:')
 
     # TODO: Refactor this to something general
 
@@ -410,37 +456,51 @@ if __name__ == '__main__':
     epsilon = .1
     alpha = .5
     num_episodes = 1000
-    rolling_window = 25
+    window = 25
     reward_y_min = -100
+
+    data = {}
 
     q, rewards, lengths = sarsa(env.spec, alpha, epsilon, num_episodes,
                                 np.random.normal(size=(env.spec.num_states, env.spec.num_actions)))
-    render(lengths, rewards, epsilon, 'cliff_walking_sarsa_random_init', reward_y_min, rolling_window)
+
+    data['sarsa'] = {'r': rewards, 'l': lengths}
 
     q, rewards, lengths = q_learning(env.spec, alpha, epsilon, num_episodes,
                                      np.random.normal(size=(env.spec.num_states, env.spec.num_actions)))
-    render(lengths, rewards, epsilon, 'cliff_walking_q_learning_random_init', reward_y_min, rolling_window)
+
+    data['q-learning'] = {'r': rewards, 'l': lengths}
 
     q, rewards, lengths = expected_sarsa(env.spec, alpha, epsilon, num_episodes,
                                      np.random.normal(size=(env.spec.num_states, env.spec.num_actions)))
-    render(lengths, rewards, epsilon, 'cliff_walking_expected_sarsa_random_init', reward_y_min, rolling_window)
+    data['expected-sarsa'] = {'r': rewards, 'l': lengths}
 
-    q, rewards, lengths = expected_sarsa(env.spec, alpha, epsilon, num_episodes,
-                                     np.random.normal(size=(env.spec.num_states, env.spec.num_actions)))
-    render(lengths, rewards, epsilon, 'cliff_walking_double_q_learning_random_init', reward_y_min, rolling_window)
+    q, rewards, lengths = double_q_learning(env.spec, alpha, epsilon, num_episodes,
+                                            np.random.normal(size=(env.spec.num_states, env.spec.num_actions)))
+    data['double-q-learning'] = {'r': rewards, 'l': lengths}
+
+    render_figure(data, window, 'algorithm', 'cliff_walking_random_init')
+
+    data = {}
 
     q, rewards, lengths = sarsa(env.spec, alpha, epsilon, num_episodes,
                                 np.zeros((env.spec.num_states, env.spec.num_actions)))
-    render(lengths, rewards, epsilon, 'cliff_walking_sarsa_zero_init', reward_y_min, rolling_window)
+
+    data['sarsa'] = {'r': rewards, 'l': lengths}
 
     q, rewards, lengths = q_learning(env.spec, alpha, epsilon, num_episodes,
                                      np.zeros((env.spec.num_states, env.spec.num_actions)))
-    render(lengths, rewards, epsilon, 'cliff_walking_q_learning_zero_init', reward_y_min, rolling_window)
+
+    data['q-learning'] = {'r': rewards, 'l': lengths}
 
     q, rewards, lengths = expected_sarsa(env.spec, alpha, epsilon, num_episodes,
                                          np.zeros((env.spec.num_states, env.spec.num_actions)))
-    render(lengths, rewards, epsilon, 'cliff_walking_expected_sarsa_zero_init', reward_y_min, rolling_window)
 
-    q, rewards, lengths = expected_sarsa(env.spec, alpha, epsilon, num_episodes,
-                                         np.zeros((env.spec.num_states, env.spec.num_actions)))
-    render(lengths, rewards, epsilon, 'cliff_walking_double_q_learning_zero_init', reward_y_min, rolling_window)
+    data['expected-sarsa'] = {'r': rewards, 'l': lengths}
+
+    q, rewards, lengths = double_q_learning(env.spec, alpha, epsilon, num_episodes,
+                                            np.zeros((env.spec.num_states, env.spec.num_actions)))
+
+    data['double-q-learning'] = {'r': rewards, 'l': lengths}
+
+    render_figure(data, window, 'algorithm', 'cliff_walking_zero_init')
