@@ -75,12 +75,12 @@ class GeneralGridWorldMDP(Env):
     +---+---+---+---+
     """
 
-    def __init__(self, width: int, height: int):
+    def __init__(self, width: int, height: int, gamma: float = 1.):
         num_states = width * height - 1
 
         assert num_states > 0, "width * height - 1 must be greater than 0!"
 
-        env_spec = EnvSpec(num_states, ActionConstants.NUM_ACTIONS, 1.)
+        env_spec = EnvSpec(num_states, ActionConstants.NUM_ACTIONS, gamma)
 
         super().__init__(env_spec)
 
@@ -117,8 +117,8 @@ class GeneralGridWorldMDP(Env):
 
 class GeneralDeterministicGridWorldMDP(GeneralGridWorldMDP):
 
-    def __init__(self, width: int, height: int):
-        super().__init__(width, height)
+    def __init__(self, width: int, height: int, gamma: float = 1.):
+        super().__init__(width, height, gamma)
 
     def _build_r_mat(self) -> np.array:
 
@@ -180,8 +180,8 @@ class GeneralDeterministicGridWorldMDP(GeneralGridWorldMDP):
 
 class GeneralDeterministicGridWorldMDPWithModel(GeneralDeterministicGridWorldMDP, EnvWithModel):
 
-    def __init__(self, width: int, height: int):
-        super().__init__(width, height)
+    def __init__(self, width: int, height: int, gamma: float = 1.):
+        super().__init__(width, height, gamma)
 
     @property
     def td(self) -> np.array:
@@ -195,13 +195,13 @@ class GeneralDeterministicGridWorldMDPWithModel(GeneralDeterministicGridWorldMDP
 class CliffWalkingMDP(Env):
 
     def __init__(self, width: int, height: int, cliff_states: [int],
-                 start_state: int, goal_state: int):
+                 start_state: int, goal_state: int, gamma: float = 1.):
 
         num_states = width * height
 
         assert num_states > 0, "width * height must be greater than 0!"
 
-        env_spec = EnvSpec(num_states, ActionConstants.NUM_ACTIONS, 1.)
+        env_spec = EnvSpec(num_states, ActionConstants.NUM_ACTIONS, gamma)
 
         super().__init__(env_spec)
 
@@ -297,12 +297,12 @@ class CliffWalkingMDP(Env):
 
 class OneStateRandomMDP(Env):
 
-    def __init__(self):
+    def __init__(self, gamma: float = 1.):
 
         num_states = 2
         num_actions = 2
 
-        env_spec = EnvSpec(num_states, num_actions, 1.)
+        env_spec = EnvSpec(num_states, num_actions, gamma)
 
         super().__init__(env_spec)
         self._num_states = num_states
