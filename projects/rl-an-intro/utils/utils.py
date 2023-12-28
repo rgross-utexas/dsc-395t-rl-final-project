@@ -8,11 +8,11 @@ def generate_trajectories(env: Env, pi: Policy, num_trajectories: int):
 
     trajs = []
     for _ in tqdm(range(num_trajectories)):
-        states, actions, rewards, done = [env.reset()[0]], [], [], []
+        states, actions, rewards, done = [env.reset()], [], [], []
 
         while not done:
             a = pi.action(states[-1])
-            s, r, done, _, _ = env.step(a)
+            s, r, done = env.step(a)
 
             states.append(s)
             actions.append(a)

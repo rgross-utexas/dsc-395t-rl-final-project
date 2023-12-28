@@ -1,5 +1,3 @@
-from typing import Dict, Tuple
-
 import numpy as np
 
 """
@@ -37,7 +35,7 @@ class Env(object):
     def spec(self) -> EnvSpec:
         return self._env_spec
 
-    def reset(self) -> Tuple[int, Dict]:
+    def reset(self) -> int:
         """
         reset the environment. It should be called when you want to generate a new episode
         return:
@@ -45,7 +43,7 @@ class Env(object):
         """
         raise NotImplementedError()
 
-    def step(self, action: int) -> Tuple[int, int, bool, bool, Dict]:
+    def step(self, action: int) -> (int, int, bool):
         """
         proceed one step.
         return:
