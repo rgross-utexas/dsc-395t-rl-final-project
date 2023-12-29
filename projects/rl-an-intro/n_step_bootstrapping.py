@@ -1,6 +1,8 @@
+import argparse
 from collections import defaultdict
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
+import cv2
 import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
@@ -52,16 +54,18 @@ def on_policy_n_step_td(
         # give a reward of 0 for time 0
         rewards.append(0)
 
+        done = False
+
         while True:
 
             # get the data from the trajectory for time t
-            if not env.is_terminal(s_t):
+            if not done:
 
                 s_t1, r_t1, done, _, _ = env.step(pi.action(s_t))
                 states.append(s_t1)
                 rewards.append(r_t1)
 
-                if env.is_terminal(s_t1):
+                if done:
                     t_terminal = t + 1
 
                 s_t = s_t1
@@ -97,8 +101,9 @@ def on_policy_sarsa(
         epsilon: float = .01,
         gamma: float = 1.,
         init_q: np.array = None,
-        q_star: Optional[np.array] = None
-) -> Tuple[np.array, defaultdict, defaultdict, defaultdict]:
+        q_star: Optional[np.array] = None,
+        render: bool = False
+) -> Tuple[np.array, defaultdict, defaultdict, defaultdict, defaultdict]:
     """
     input:
         env_spec: environment spec
@@ -122,12 +127,15 @@ def on_policy_sarsa(
     episode_lengths = defaultdict(float)
     episode_rewards = defaultdict(float)
     episode_rmse = defaultdict(float)
+    episode_frames = defaultdict(List)
 
     for e in tqdm(range(num_episodes)):
 
         states = []
         actions = []
         rewards = []
+        frames = []
+        episode_frames[e] = frames
 
         t = 0
         t_terminal = np.inf
@@ -144,6 +152,9 @@ def on_policy_sarsa(
         # give a reward of 0 for time 0
         rewards.append(0)
 
+        if render:
+            frames.append(env.render())
+
         while True:
 
             if t < t_terminal:
@@ -153,6 +164,9 @@ def on_policy_sarsa(
                 states.append(s_t1)
                 rewards.append(r_t1)
                 episode_rewards[e] += r_t1
+
+                if render:
+                    frames.append(env.render())
 
                 if done:
                     # the next time step is terminal
@@ -171,7 +185,6 @@ def on_policy_sarsa(
                     g += (gamma ** (i - (tau + 1))) * rewards[i]
 
                 if tau + n < t_terminal:
-
                     # get the state-action for tau + n
                     s_tau_n = states[tau + n]
                     a_tau_n = actions[tau + n]
@@ -197,7 +210,9 @@ def on_policy_sarsa(
             rmse = np.sqrt(np.power(q - q_star, 2).sum())
             episode_rmse[e] = rmse
 
-    return q, episode_rewards, episode_lengths, episode_rmse
+    env.close()
+
+    return q, episode_rewards, episode_lengths, episode_rmse, episode_frames
 
 
 def off_policy_sarsa(
@@ -205,7 +220,7 @@ def off_policy_sarsa(
         alpha: float,
         num_episodes: int,
         n: int,
-        tpi_epsilon: float = .0, # default to greedy
+        tpi_epsilon: float = .0,  # default to greedy
         bpi_epsilon: float = .3,
         gamma: float = 1.,
         init_q: np.array = None,
@@ -287,14 +302,13 @@ def off_policy_sarsa(
                     a_i = actions[i]
                     tpi_p = tpi.action_prob(s_i, a_i)
                     bpi_p = bpi.action_prob(s_i, a_i)
-                    rho *= tpi_p/bpi_p
+                    rho *= tpi_p / bpi_p
 
                 g = 0.
                 for i in range(tau + 1, min(tau + n, t_terminal) + 1):
                     g += (gamma ** (i - (tau + 1))) * rewards[i]
 
                 if tau + n < t_terminal:
-
                     # get the state-action for tau + n
                     s_tau_n = states[tau + n]
                     a_tau_n = actions[tau + n]
@@ -329,7 +343,7 @@ def tree_backup(
         num_episodes: int,
         num_actions: int,
         n: int,
-        tpi_epsilon: float = .0, # default to greedy
+        tpi_epsilon: float = .0,  # default to greedy
         bpi_epsilon: float = .01,
         gamma: float = 1.,
         init_q: np.array = None,
@@ -448,11 +462,11 @@ def tree_backup(
 
     return q, episode_rewards, episode_lengths, episode_rmse
 
+
 # TODO: Implement n-step Q-sigma
 
 
 def render_rmse(rmse: defaultdict, filename: str):
-
     fig, axis = plt.subplots(1, 1)
 
     fig.set_figwidth(12)
@@ -469,7 +483,6 @@ def render_rmse(rmse: defaultdict, filename: str):
 def render(lengths: defaultdict, rewards: defaultdict, filename: str,
            reward_y_min: Optional[float] = None, length_y_max: Optional[float] = None,
            rolling_window: Optional[int] = None, description: str = ''):
-
     fig, axes = plt.subplots(2, 1)
 
     fig.set_figwidth(12)
@@ -509,192 +522,251 @@ def render(lengths: defaultdict, rewards: defaultdict, filename: str,
 
 
 def render_figure(data: Dict, window: int, label: str, filename: str):
-
     # render the figure and write it to file
     fig, axes = plt.subplots(2, 1)
     fig.set_figwidth(12)
     fig.set_figheight(12)
 
-    for n, data in data.items():
-
+    for value, data in data.items():
         rewards = pd.Series(data['r'].values()).rolling(window, min_periods=window).mean().to_numpy()
         lengths = pd.Series(data['l'].values()).rolling(window, min_periods=window).mean().to_numpy()
 
-        axes[0].plot(rewards, label=f'{label}={n}')
-        axes[1].plot(lengths, label=f'{label}={n}')
+        axes[0].plot(rewards, label=f'{label}={value}')
+        axes[1].plot(lengths, label=f'{label}={value}')
 
     axes[0].legend(loc='lower right')
     axes[0].title.set_text(f"Reward per Episode Over Time ({window} step rolling average)")
     axes[1].legend(loc='upper right')
     axes[1].title.set_text(f"Episode Length Over Time ({window} step rolling average)")
 
-    plt.savefig(filename)
+    plt.savefig(filename.replace('.', 'p'))
+
+
+def save_frames_as_video(episode_frames: defaultdict, algorithm: str, cadence: int = 50,
+                         filename_template: str = './cliff_walking_{algorithm}_episode_{episode}_of_{total}.mp4'):
+
+    for i in range(cadence-1, len(episode_frames), cadence):
+
+        frames = episode_frames[i]
+        np_frames = np.array(frames)
+
+        filename = filename_template.format(algorithm=algorithm, episode=i+1, total=len(episode_frames))
+
+        fps = 10
+        height = np_frames.shape[2]
+        width = np_frames.shape[1]
+        out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), fps, (height, width))
+        for i in range(np_frames.shape[0]):
+            data = np_frames[i, :, :, :]
+            # data = cv2.cvtColor(data, cv2.COLOR_RGB2BGR)
+            out.write(data)
+        out.release()
 
 
 if __name__ == '__main__':
 
-    n_episodes = 10000
-    n_steps = [1, 2, 3, 4, 5, 10]
-    alpha = .01
-    epsilons = [.01, .05, .1, .2, .3, .4, .5]
-    gamma = 1.
+    parser = argparse.ArgumentParser(prog='n-step-bootstrapping')
+    parser.add_argument('--run_anim', type=bool, default=False)
+    parser.add_argument('--num_episodes', type=int, default=500)
+    parser.add_argument('--n', type=int, default=5)
+    parser.add_argument('--epsilon', type=float, default=.1)
+    parser.add_argument('--alpha', type=float, default=.01)
+    parser.add_argument('--gamma', type=float, default=1.)
+    args = parser.parse_args()
 
-    # create a model-free mdp to perform value prediction
-    env = GeneralDeterministicGridWorldMDP(4, 4)
-    behavior_policy = RandomPolicy(env.spec.num_actions)
+    if args.run_anim:
 
-    # n-step td
+        # create a cliff walking env
 
-    print('\nn-step TD:')
+        env = gym.make('CliffWalking-v0', render_mode="rgb_array")
+        env.metadata['render_fps'] = args.render_fps
 
-    for n in n_steps:
-        print(f'\nNumber of steps: {n}, alpha: {alpha}, number of episodes: {n_episodes}:')
-        v = on_policy_n_step_td(env, behavior_policy, n_episodes, n, alpha, gamma,
-                                np.zeros(env.spec.num_states))
-        print(f'\n{v}')
+        print('Cliff Walking:')
 
-    q_star = np.array(
-        [[ 0.,  0.,  0.,  0.],
-         [-1., -2., -3., -3.],
-         [-2., -3., -4., -4.],
-         [-3., -4., -4., -3.],
-         [-2., -1., -3., -3.],
-         [-2., -2., -4., -4.],
-         [-3., -3., -3., -3.],
-         [-4., -4., -3., -2.],
-         [-3., -2., -4., -4.],
-         [-3., -3., -3., -3.],
-         [-4., -4., -2., -2.],
-         [-3., -3., -2., -1.],
-         [-4., -3., -3., -4.],
-         [-4., -4., -2., -3.],
-         [-3., -3., -1., -2.]]
-    )
+        epsilon = args.epsilon
+        alpha = args.alpha
+        num_episodes = args.num_episodes
+        n = args.n
+        gamma = args.gamma
 
-    # n-step on-policy sarsa
+        data = {}
 
-    print('\nn-step on-policy Sarsa:')
+        _, rewards, lengths, _, frames = on_policy_sarsa(env, alpha, num_episodes, n, epsilon, gamma,
+                                                         init_q=np.zeros((env.observation_space.n,
+                                                                          env.action_space.n)))
 
-    epsilon = .01
+        save_frames_as_video(frames, 'n_step_sarsa')
 
-    data = {}
-    for n in n_steps:
-        print(f'\nNumber of steps: {n}, epsilon: {epsilon}, alpha: {alpha}, number of episodes: {n_episodes}:')
-        q, rewards, lengths, rmse = on_policy_sarsa(env, alpha, n_episodes, n, epsilon, gamma,
-                                                    np.zeros((env.spec.num_states, env.spec.num_actions)),
+        data[n] = {'r': rewards, 'l': lengths}
+
+        window = 25
+        render_figure(data, window, 'steps', f'on_policy_sarsa_{n}_{epsilon}_{alpha}_{gamma}')
+    else:
+
+        n_episodes = 1000
+        n_steps = [1, 2, 3, 4, 5, 10]
+        alpha = .01
+        epsilons = [.01, .05, .1, .2, .3, .4, .5]
+        gamma = 1.
+
+        # create a model-free mdp to perform value prediction
+        env = GeneralDeterministicGridWorldMDP(4, 4)
+
+        num_actions = env.spec.num_actions
+        num_states = env.spec.num_states
+        init_q = np.zeros((num_states, num_actions))
+        behavior_policy = RandomPolicy(num_actions)
+
+        # n-step td
+
+        print('\nn-step TD:')
+
+        for n in n_steps:
+            print(f'\nNumber of steps: {n}, alpha: {alpha}, number of episodes: {n_episodes}:')
+            v = on_policy_n_step_td(env, behavior_policy, n_episodes, n, alpha, gamma,
+                                    np.zeros(num_states))
+            print(f'\n{v}')
+
+        q_star = np.array(
+            [[0., 0., 0., 0.],
+             [-1., -2., -3., -3.],
+             [-2., -3., -4., -4.],
+             [-3., -4., -4., -3.],
+             [-2., -1., -3., -3.],
+             [-2., -2., -4., -4.],
+             [-3., -3., -3., -3.],
+             [-4., -4., -3., -2.],
+             [-3., -2., -4., -4.],
+             [-3., -3., -3., -3.],
+             [-4., -4., -2., -2.],
+             [-3., -3., -2., -1.],
+             [-4., -3., -3., -4.],
+             [-4., -4., -2., -3.],
+             [-3., -3., -1., -2.]]
+        )
+
+        # n-step on-policy sarsa
+
+        print('\nn-step on-policy Sarsa:')
+
+        epsilon = .01
+
+        data = {}
+        for n in n_steps:
+            print(f'\nNumber of steps: {n}, epsilon: {epsilon}, alpha: {alpha}, number of episodes: {n_episodes}:')
+            q, rewards, lengths, rmse, _ = on_policy_sarsa(env, alpha, n_episodes, n, epsilon, gamma,
+                                                           init_q,
+                                                           q_star=q_star)
+            print(f'\n{q}')
+
+            data[n] = {'r': rewards, 'l': lengths}
+
+        render_figure(data, 100, 'steps', 'on_policy_sarsa_by_number_of_steps')
+
+        n = 3
+
+        data = {}
+        for epsilon in epsilons:
+            print(f'\nNumber of steps: {n}, epsilon: {epsilon}, alpha: {alpha}, number of episodes: {n_episodes}:')
+            q, rewards, lengths, rmse, _ = on_policy_sarsa(env, alpha, n_episodes, n, epsilon, gamma,
+                                                           init_q,
+                                                           q_star=q_star)
+            data[epsilon] = {'r': rewards, 'l': lengths}
+
+        render_figure(data, 100, 'epsilon', 'on_policy_sarsa_by_epsilon')
+
+        print('\nn-step tree backup:')
+
+        data = {}
+        for n in n_steps:
+            print(f'\nNumber of steps: {n}, alpha: {alpha}, '
+                  f'number of episodes: {n_episodes}:')
+            q, rewards, lengths, rmse = tree_backup(env, alpha, n_episodes, num_actions, n, gamma=gamma,
+                                                    init_q=init_q,
                                                     q_star=q_star)
-        print(f'\n{q}')
+            print(f'\n{q}')
 
-        data[n] = {'r': rewards, 'l': lengths}
+            data[n] = {'r': rewards, 'l': lengths}
 
-    render_figure(data, 100, 'steps', 'on_policy_sarsa_by_number_of_steps')
+        render_figure(data, 100, 'steps', 'tree_backup_by_number_of_steps')
 
-    n = 3
+        n = 3
 
-    data = {}
-    for epsilon in epsilons:
-        print(f'\nNumber of steps: {n}, epsilon: {epsilon}, alpha: {alpha}, number of episodes: {n_episodes}:')
-        q, rewards, lengths, rmse = on_policy_sarsa(env, alpha, n_episodes, n, epsilon, gamma,
-                                                    np.zeros((env.spec.num_states, env.spec.num_actions)),
+        data = {}
+        for bpi_epsilon in epsilons:
+            print(f'\nNumber of steps: {n}, alpha: {alpha}, behavior policy epsilon: {bpi_epsilon}, '
+                  f'number of episodes: {n_episodes}:')
+            q, rewards, lengths, rmse = tree_backup(env, alpha, n_episodes, env.spec.num_actions, n, gamma=gamma,
+                                                    init_q=init_q,
+                                                    bpi_epsilon=bpi_epsilon,
                                                     q_star=q_star)
-        data[epsilon] = {'r': rewards, 'l': lengths}
+            data[bpi_epsilon] = {'r': rewards, 'l': lengths}
 
-    render_figure(data, 100, 'epsilon', 'on_policy_sarsa_by_epsilon')
+        render_figure(data, 100, 'bpi epsilon', 'tree_backup_by_bpi_epsilon')
 
-    print('\nn-step tree backup:')
+        # n-step off-policy sarsa
 
-    data = {}
-    for n in n_steps:
-        print(f'\nNumber of steps: {n}, alpha: {alpha}, '
-              f'number of episodes: {n_episodes}:')
-        q, rewards, lengths, rmse = tree_backup(env, alpha, n_episodes, env.spec.num_actions, n, gamma=gamma,
-                                                init_q=np.zeros((env.spec.num_states, env.spec.num_actions)),
-                                                q_star=q_star)
-        print(f'\n{q}')
+        print('\nn-step off-policy Sarsa:')
 
-        data[n] = {'r': rewards, 'l': lengths}
+        data = {}
+        for n in n_steps:
+            print(f'\nNumber of steps: {n}, alpha: {alpha}, '
+                  f'number of episodes: {n_episodes}:')
+            q, rewards, lengths, rmse = off_policy_sarsa(env, alpha, n_episodes, n, gamma=gamma,
+                                                         init_q=init_q,
+                                                         q_star=q_star)
+            print(f'\n{q}')
 
-    render_figure(data, 100, 'steps', 'tree_backup_by_number_of_steps')
+            data[n] = {'r': rewards, 'l': lengths}
 
-    n = 3
+        render_figure(data, 100, 'steps', 'off_policy_sarsa_by_number_of_steps')
 
-    data = {}
-    for bpi_epsilon in epsilons:
-        print(f'\nNumber of steps: {n}, alpha: {alpha}, behavior policy epsilon: {bpi_epsilon}, '
-              f'number of episodes: {n_episodes}:')
-        q, rewards, lengths, rmse = tree_backup(env, alpha, n_episodes, env.spec.num_actions, n, gamma=gamma,
-                                                init_q=np.zeros((env.spec.num_states, env.spec.num_actions)),
-                                                bpi_epsilon=bpi_epsilon,
-                                                q_star=q_star)
-        data[bpi_epsilon] = {'r': rewards, 'l': lengths}
+        n = 3
 
-    render_figure(data, 100, 'bpi epsilon','tree_backup_by_bpi_epsilon')
+        # off policy sarsa has trouble with very small epsilon values for the e-greedy behavior policy,
+        # so .01 was removed
+        epsilons = [.05, 1, .2, .3, .4, .5]
 
-    # n-step off-policy sarsa
+        data = {}
+        for bpi_epsilon in epsilons:
+            print(f'\nNumber of steps: {n}, alpha: {alpha}, behavior policy epsilon: {bpi_epsilon}, '
+                  f'number of episodes: {n_episodes}:')
+            q, rewards, lengths, rmse = off_policy_sarsa(env, alpha, n_episodes, n, gamma=gamma,
+                                                         init_q=init_q,
+                                                         bpi_epsilon=bpi_epsilon,
+                                                         q_star=q_star)
+            data[bpi_epsilon] = {'r': rewards, 'l': lengths}
 
-    print('\nn-step off-policy Sarsa:')
+        render_figure(data, 100, 'bpi epsilon', 'off_policy_sarsa_by_bpi_epsilon')
 
-    data = {}
-    for n in n_steps:
-        print(f'\nNumber of steps: {n}, alpha: {alpha}, '
-              f'number of episodes: {n_episodes}:')
-        q, rewards, lengths, rmse = off_policy_sarsa(env, alpha, n_episodes, n, gamma=gamma,
-                                                     init_q=np.zeros((env.spec.num_states, env.spec.num_actions)),
-                                                     q_star=q_star)
-        print(f'\n{q}')
 
-        data[n] = {'r': rewards, 'l': lengths}
+        epsilon = .1
+        alpha = .01
+        num_episodes = 1000
+        window = 25
 
-    render_figure(data, 100, 'steps', 'off_policy_sarsa_by_number_of_steps')
+        print('Cliff Walking:')
+        env = gym.make('CliffWalking-v0')
 
-    n = 3
+        data = {}
 
-    # off policy sarsa has trouble with very small epsilon values for the e-greedy behavior policy,
-    # so .01 was removed
-    epsilons = [.05, 1, .2, .3, .4, .5]
+        _, rewards, lengths, _, _ = on_policy_sarsa(env, alpha, num_episodes, 3, epsilon, 1.,
+                                                    init_q = np.zeros((env.observation_space.n,
+                                                                       env.action_space.n)))
 
-    data = {}
-    for bpi_epsilon in epsilons:
-        print(f'\nNumber of steps: {n}, alpha: {alpha}, behavior policy epsilon: {bpi_epsilon}, '
-              f'number of episodes: {n_episodes}:')
-        q, rewards, lengths, rmse = off_policy_sarsa(env, alpha, n_episodes, n, gamma=gamma,
-                                                     init_q=np.zeros((env.spec.num_states, env.spec.num_actions)),
-                                                     bpi_epsilon=bpi_epsilon,
-                                                     q_star=q_star)
-        data[bpi_epsilon] = {'r': rewards, 'l': lengths}
+        data['on-policy-sarsa'] = {'r': rewards, 'l': lengths}
 
-    render_figure(data, 100, 'bpi epsilon','off_policy_sarsa_by_bpi_epsilon')
+        _, rewards, lengths, _ = off_policy_sarsa(env, alpha, num_episodes, 3, epsilon, gamma=1.,
+                                                  init_q=np.zeros((env.observation_space.n,
+                                                                   env.action_space.n)))
 
-    # create a cliff walking env
+        data['off-policy-sarsa'] = {'r': rewards, 'l': lengths}
 
-    env = gym.make('CliffWalking-v0')
+        _, rewards, lengths, _ = tree_backup(env, alpha, num_episodes,
+                                             num_actions=env.action_space.n, n=3, gamma=1.,
+                                             init_q=np.zeros((env.observation_space.n,
+                                                              env.action_space.n)))
 
-    print('Cliff Walking:')
+        data['tree-backup'] = {'r': rewards, 'l': lengths}
 
-    epsilon = .1
-    alpha = .01
-    num_episodes = 1000
-    window = 25
-
-    data = {}
-
-    _, rewards, lengths, _ = on_policy_sarsa(env, alpha, num_episodes, 3, epsilon, 1.,
-                                                init_q=np.zeros((env.observation_space.n,
-                                                                 env.action_space.n)))
-
-    data['on-policy-sarsa'] = {'r': rewards, 'l': lengths}
-
-    _, rewards, lengths, _ = off_policy_sarsa(env, alpha, num_episodes, 3, epsilon, gamma=1.,
-                                                 init_q=np.zeros((env.observation_space.n,
-                                                                  env.action_space.n)))
-
-    data['off-policy-sarsa'] = {'r': rewards, 'l': lengths}
-
-    _, rewards, lengths, _ = tree_backup(env, alpha, num_episodes,
-                                            num_actions=env.action_space.n, n=3, gamma=1.,
-                                            init_q=np.zeros((env.observation_space.n,
-                                                             env.action_space.n)))
-
-    data['tree-backup'] = {'r': rewards, 'l': lengths}
-
-    render_figure(data, window, 'algorithm', 'n_step_cliff_walking')
+        render_figure(data, window, 'algorithm', 'n_step_cliff_walking')

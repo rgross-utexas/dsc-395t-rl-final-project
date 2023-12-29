@@ -37,6 +37,9 @@ class Env(object):
     def spec(self) -> EnvSpec:
         return self._env_spec
 
+    def close(self):
+        pass
+
     def reset(self) -> Tuple[int, Dict]:
         """
         reset the environment. It should be called when you want to generate a new episode
