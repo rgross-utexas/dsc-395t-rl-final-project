@@ -1228,6 +1228,8 @@ Off-policy action-state value prediction with weighted importance sampling from 
 
 #### On-policy N-step Sarsa, episode 50 of 500 
 
+![](images/cliff_walking_n_step_sarsa_episode_50_of_500.mp4)
+
 https://github.com/rgross-utexas/reinforcement-learning/assets/111807942/4c504de7-e22c-4ac4-bf42-59ef9fb95ab9
 
 #### On-policy N-step Sarsa, episode 100 of 500 
