@@ -1225,3 +1225,43 @@ Off-policy action-state value prediction with weighted importance sampling from 
 ##### alpha=.01, epsilon=.1, episode rolling average=25
 
 ![](images/n_step_cliff_walking.png)
+
+#### On-policy N-step Sarsa, episode 50 of 500 
+
+https://github.com/rgross-utexas/reinforcement-learning/assets/111807942/4c504de7-e22c-4ac4-bf42-59ef9fb95ab9
+
+#### On-policy N-step Sarsa, episode 100 of 500 
+
+https://github.com/rgross-utexas/reinforcement-learning/assets/111807942/eddc9ce6-7ec1-457a-a1a6-0d6892ca4ef9
+
+#### On-policy N-step Sarsa, episode 150 of 500 
+
+https://github.com/rgross-utexas/reinforcement-learning/assets/111807942/89eab080-52d9-4476-93bd-8c20074f37d2
+
+#### On-policy N-step Sarsa, episode 200 of 500 
+
+https://github.com/rgross-utexas/reinforcement-learning/assets/111807942/35363da5-b4c8-479c-92e3-bdc759d8b9fd
+
+#### On-policy N-step Sarsa, episode 250 of 500 
+
+https://github.com/rgross-utexas/reinforcement-learning/assets/111807942/59516e62-9244-48b6-b589-0d38c0d29ef3
+
+#### On-policy N-step Sarsa, episode 300 of 500 
+
+https://github.com/rgross-utexas/reinforcement-learning/assets/111807942/d193eb67-102d-40e9-874d-f147867e9171
+
+#### On-policy N-step Sarsa, episode 350 of 500 
+
+https://github.com/rgross-utexas/reinforcement-learning/assets/111807942/a8e1db60-1c34-486a-9137-b129fe53149f
+
+#### On-policy N-step Sarsa, episode 400 of 500 
+
+https://github.com/rgross-utexas/reinforcement-learning/assets/111807942/1ea820ec-92f9-4182-aaba-fb0e45d339f3
+
+#### On-policy N-step Sarsa, episode 450 of 500 
+
+https://github.com/rgross-utexas/reinforcement-learning/assets/111807942/fcc83b49-2c2b-40f7-8bc1-8cc8bf1c69ee
+
+#### On-policy N-step Sarsa, episode 500 of 500 
+
+https://github.com/rgross-utexas/reinforcement-learning/assets/111807942/b751dce7-10f7-4d6c-a04c-1f03977e7c7e
