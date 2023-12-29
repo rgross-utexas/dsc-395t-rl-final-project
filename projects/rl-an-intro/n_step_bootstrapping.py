@@ -1,15 +1,14 @@
 from collections import defaultdict
 from typing import Dict, Optional, Tuple
 
+import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from utils.env import EnvSpec
 from utils.mdp import GeneralDeterministicGridWorldMDP
-from utils.policy import EGreedyPolicy, GreedyPolicy, Policy, RandomPolicy
-from utils.utils import generate_trajectories
+from utils.policy import EGreedyPolicy, Policy, RandomPolicy
 
 INFINITY = 10e10
 
@@ -665,3 +664,37 @@ if __name__ == '__main__':
         data[bpi_epsilon] = {'r': rewards, 'l': lengths}
 
     render_figure(data, 100, 'bpi epsilon','off_policy_sarsa_by_bpi_epsilon')
+
+    # create a cliff walking env
+
+    env = gym.make('CliffWalking-v0')
+
+    print('Cliff Walking:')
+
+    epsilon = .1
+    alpha = .01
+    num_episodes = 1000
+    window = 25
+
+    data = {}
+
+    _, rewards, lengths, _ = on_policy_sarsa(env, alpha, num_episodes, 3, epsilon, 1.,
+                                                init_q=np.zeros((env.observation_space.n,
+                                                                 env.action_space.n)))
+
+    data['on-policy-sarsa'] = {'r': rewards, 'l': lengths}
+
+    _, rewards, lengths, _ = off_policy_sarsa(env, alpha, num_episodes, 3, epsilon, gamma=1.,
+                                                 init_q=np.zeros((env.observation_space.n,
+                                                                  env.action_space.n)))
+
+    data['off-policy-sarsa'] = {'r': rewards, 'l': lengths}
+
+    _, rewards, lengths, _ = tree_backup(env, alpha, num_episodes,
+                                            num_actions=env.action_space.n, n=3, gamma=1.,
+                                            init_q=np.zeros((env.observation_space.n,
+                                                             env.action_space.n)))
+
+    data['tree-backup'] = {'r': rewards, 'l': lengths}
+
+    render_figure(data, window, 'algorithm', 'n_step_cliff_walking')

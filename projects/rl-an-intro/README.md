@@ -1210,3 +1210,18 @@ Off-policy action-state value prediction with weighted importance sampling from 
 #### Using a constant number of steps = 3, Off-policy Sarsa was run with various behavior policy epsilons
 
 ![](images/off_policy_n_step_sarsa_by_bpi_epsilon.png)
+
+### Cliff Walking
+
+#### $4 \times 12$, starting state is in the lower-left and the goal/terminal state is in the lower-right
+
+#### On-policy N-step Sarsa vs Off-policy N-step Sarsa vs N-step Tree Backup
+
+    epsilon = .1
+    alpha = .01
+    num_episodes = 1000
+    window = 25
+
+##### alpha=.01, epsilon=.1, episode rolling average=25
+
+![](images/n_step_cliff_walking.png)
