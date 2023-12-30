@@ -576,12 +576,10 @@ if __name__ == '__main__':
 
     if args.run_anim:
 
-        # create a cliff walking env
-
-        env = gym.make('CliffWalking-v0', render_mode="rgb_array")
-        env.metadata['render_fps'] = args.render_fps
-
         print('Cliff Walking:')
+
+        # create a cliff walking env
+        env = gym.make('CliffWalking-v0', render_mode="rgb_array")
 
         epsilon = args.epsilon
         alpha = args.alpha
@@ -593,7 +591,8 @@ if __name__ == '__main__':
 
         _, rewards, lengths, _, frames = on_policy_sarsa(env, alpha, num_episodes, n, epsilon, gamma,
                                                          init_q=np.zeros((env.observation_space.n,
-                                                                          env.action_space.n)))
+                                                                          env.action_space.n)),
+                                                         render=True)
 
         save_frames_as_video(frames, 'n_step_sarsa')
 
