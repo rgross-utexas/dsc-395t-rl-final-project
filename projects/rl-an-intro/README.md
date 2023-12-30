@@ -1223,5 +1223,3 @@ Off-policy action-state value prediction with weighted importance sampling from 
     window = 25
 
 ##### alpha=.01, epsilon=.1, episode rolling average=25
-
-![](images/n_step_cliff_walking.png)
