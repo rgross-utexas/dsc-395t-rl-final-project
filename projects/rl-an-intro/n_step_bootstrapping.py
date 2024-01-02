@@ -13,6 +13,7 @@ from utils.mdp import GeneralDeterministicGridWorldMDP
 from utils.policy import EGreedyPolicy, Policy, RandomPolicy
 
 INFINITY = 10e10
+DEBUG = False
 
 
 def on_policy_n_step_td(
@@ -102,7 +103,8 @@ def on_policy_sarsa(
         gamma: float = 1.,
         init_q: np.array = None,
         q_star: Optional[np.array] = None,
-        render: bool = False
+        render: bool = False,
+        render_cadence: int = 50
 ) -> Tuple[np.array, defaultdict, defaultdict, defaultdict, defaultdict]:
     """
     input:
@@ -152,7 +154,7 @@ def on_policy_sarsa(
         # give a reward of 0 for time 0
         rewards.append(0)
 
-        if render:
+        if render and (e + 1) % render_cadence == 0:
             frames.append(env.render())
 
         while True:
@@ -165,7 +167,7 @@ def on_policy_sarsa(
                 rewards.append(r_t1)
                 episode_rewards[e] += r_t1
 
-                if render:
+                if render and (e + 1) % render_cadence == 0:
                     frames.append(env.render())
 
                 if done:
@@ -202,6 +204,9 @@ def on_policy_sarsa(
             episode_lengths[e] = t
 
             if tau == t_terminal - 1:
+                if DEBUG:
+                    print(f'Completed episode {e+1} in {t+1} steps with a '
+                          f'reward of {episode_rewards[e]}')
                 break
 
             t += 1
@@ -224,8 +229,10 @@ def off_policy_sarsa(
         bpi_epsilon: float = .3,
         gamma: float = 1.,
         init_q: np.array = None,
-        q_star: Optional[np.array] = None
-) -> Tuple[np.array, defaultdict, defaultdict, defaultdict]:
+        q_star: Optional[np.array] = None,
+        render: bool = False,
+        render_cadence: int = 50
+) -> Tuple[np.array, defaultdict, defaultdict, defaultdict, defaultdict]:
     """
     input:
         env_spec: environment spec
@@ -252,12 +259,15 @@ def off_policy_sarsa(
     episode_lengths = defaultdict(float)
     episode_rewards = defaultdict(float)
     episode_rmse = defaultdict(float)
+    episode_frames = defaultdict(List)
 
     for e in tqdm(range(num_episodes)):
 
         states = []
         actions = []
         rewards = []
+        frames = []
+        episode_frames[e] = frames
 
         t = 0
         t_terminal = np.inf
@@ -274,6 +284,9 @@ def off_policy_sarsa(
         # give a reward of 0 for time 0
         rewards.append(0)
 
+        if render and (e + 1) % render_cadence == 0:
+            frames.append(env.render())
+
         while True:
 
             if t < t_terminal:
@@ -283,6 +296,9 @@ def off_policy_sarsa(
                 states.append(s_t1)
                 rewards.append(r_t1)
                 episode_rewards[e] += r_t1
+
+                if render and (e + 1) % render_cadence == 0:
+                    frames.append(env.render())
 
                 if done:
                     # the next time step is terminal
@@ -326,6 +342,9 @@ def off_policy_sarsa(
             episode_lengths[e] = t
 
             if tau == t_terminal - 1:
+                if DEBUG:
+                    print(f'\nCompleted episode {e+1} in {t+1} steps with a '
+                          f'reward of {episode_rewards[e]}')
                 break
 
             t += 1
@@ -334,7 +353,7 @@ def off_policy_sarsa(
             rmse = np.sqrt(np.power(q - q_star, 2).sum())
             episode_rmse[e] = rmse
 
-    return q, episode_rewards, episode_lengths, episode_rmse
+    return q, episode_rewards, episode_lengths, episode_rmse, episode_frames
 
 
 def tree_backup(
@@ -542,67 +561,103 @@ def render_figure(data: Dict, window: int, label: str, filename: str):
     plt.savefig(filename.replace('.', 'p'))
 
 
-def save_frames_as_video(episode_frames: defaultdict, algorithm: str, cadence: int = 50,
-                         filename_template: str = './cliff_walking_{algorithm}_episode_{episode}_of_{total}.mp4'):
+def save_frames_as_video(episode_frames: defaultdict, run_type: str, algorithm: str, render_cadence: int = 50,
+                         filename_template: str = './{algorithm}_episode_{episode}_of_{total}.mp4'):
 
-    for i in range(cadence-1, len(episode_frames), cadence):
+    for i, frames in episode_frames.items():
 
-        frames = episode_frames[i]
-        np_frames = np.array(frames)
+        if len(frames) > 0:
+            np_frames = np.array(frames)
+            filename = filename_template.format(run_type=run_type, algorithm=algorithm, episode=i+1,
+                                                total=len(episode_frames))
 
-        filename = filename_template.format(algorithm=algorithm, episode=i+1, total=len(episode_frames))
-
-        fps = 10
-        height = np_frames.shape[2]
-        width = np_frames.shape[1]
-        out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), fps, (height, width))
-        for i in range(np_frames.shape[0]):
-            data = np_frames[i, :, :, :]
-            # data = cv2.cvtColor(data, cv2.COLOR_RGB2BGR)
-            out.write(data)
-        out.release()
+            fps = 10
+            height = np_frames.shape[2]
+            width = np_frames.shape[1]
+            out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), fps, (height, width))
+            for i in range(np_frames.shape[0]):
+                data = np_frames[i, :, :, :]
+                # data = cv2.cvtColor(data, cv2.COLOR_RGB2BGR)
+                out.write(data)
+            out.release()
 
 
 if __name__ == '__main__':
 
+    run_type_lookup = {
+        'graphs': {},
+        'cliff_walking': {'gym_type': 'CliffWalking-v0'},
+        'frozen_lake': {'gym_type': 'FrozenLake-v1'},
+    }
+
     parser = argparse.ArgumentParser(prog='n-step-bootstrapping')
-    parser.add_argument('--run_anim', type=bool, default=False)
-    parser.add_argument('--num_episodes', type=int, default=500)
+    parser.add_argument('--run_type', choices=run_type_lookup.keys(), default='graphs')
+    parser.add_argument('--algorithm',
+                        choices=['on_policy_sarsa', 'off_policy_sarsa'], default='on_policy_sarsa')
+    parser.add_argument('--render_mode', choices=['human', 'rgb_array'], default='rgb_array')
+    parser.add_argument('--num_episodes', type=int, default=1000)
+    parser.add_argument('--render_fps', type=int, default=60)
     parser.add_argument('--n', type=int, default=5)
-    parser.add_argument('--epsilon', type=float, default=.1)
+    parser.add_argument('--epsilon', type=float, default=.2)
+    parser.add_argument('--tpi_epsilon', type=float, default=.0)
+    parser.add_argument('--bpi_epsilon', type=float, default=.1)
     parser.add_argument('--alpha', type=float, default=.01)
     parser.add_argument('--gamma', type=float, default=1.)
+    parser.add_argument('--render_cadence', type=int, default=2500)
+
     args = parser.parse_args()
 
-    if args.run_anim:
+    if args.run_type in ['cliff_walking', 'frozen_lake']:
 
-        print('Cliff Walking:')
+        run_type = args.run_type
+        algorithm = args.algorithm
+        gym_type = run_type_lookup[run_type]['gym_type']
+        render_cadence = args.render_cadence
+
+        print(f'Running {run_type} with {gym_type}...')
 
         # create a cliff walking env
-        env = gym.make('CliffWalking-v0', render_mode="rgb_array")
+        env = gym.make(gym_type, render_mode=args.render_mode)
+        env.metadata['render_fps'] = args.render_fps
 
         epsilon = args.epsilon
         alpha = args.alpha
         num_episodes = args.num_episodes
         n = args.n
         gamma = args.gamma
+        n_states = env.observation_space.n
+        n_actions = env.action_space.n
 
-        data = {}
+        if args.algorithm == 'on_policy_sarsa':
+            _, rewards, lengths, _, frames = on_policy_sarsa(env, alpha, num_episodes, n, epsilon, gamma,
+                                                             init_q=np.zeros((n_states, n_actions)),
+                                                             render=True,
+                                                             render_cadence=render_cadence)
+            data = {n: {'r': rewards, 'l': lengths}}
 
-        _, rewards, lengths, _, frames = on_policy_sarsa(env, alpha, num_episodes, n, epsilon, gamma,
-                                                         init_q=np.zeros((env.observation_space.n,
-                                                                          env.action_space.n)),
-                                                         render=True)
-
-        save_frames_as_video(frames, 'n_step_sarsa')
-
-        data[n] = {'r': rewards, 'l': lengths}
+            filename = f'{run_type}_{algorithm}_{n}_{epsilon}_{alpha}_{gamma}'
+        elif args.algorithm == 'off_policy_sarsa':
+            _, rewards, lengths, _, frames = off_policy_sarsa(env=env, alpha=alpha, num_episodes=num_episodes,
+                                                              n=n, gamma=gamma, tpi_epsilon=args.tpi_epsilon,
+                                                              bpi_epsilon=args.bpi_epsilon,
+                                                              init_q=np.zeros((n_states, n_actions)),
+                                                              render=True,
+                                                              render_cadence=render_cadence)
+            data = {n: {'r': rewards, 'l': lengths}}
+            filename = f'{run_type}_{algorithm}_{n}_{args.tpi_epsilon}_{args.bpi_epsilon}_{alpha}_{gamma}'
+        else:
+            raise RuntimeError('No valid algorithm selected!')
 
         window = 25
-        render_figure(data, window, 'steps', f'on_policy_sarsa_{n}_{epsilon}_{alpha}_{gamma}')
+        render_figure(data, window, 'steps', filename)
+
+        if args.render_mode == 'rgb_array':
+            save_frames_as_video(frames, run_type=run_type, algorithm='n_step_sarsa', render_cadence=render_cadence,
+                                 filename_template='{run_type}_{algorithm}_episode_{episode}_of_{total}.mp4')
+
     else:
 
-        n_episodes = 1000
+        n_episodes = 10000
         n_steps = [1, 2, 3, 4, 5, 10]
         alpha = .01
         epsilons = [.01, .05, .1, .2, .3, .4, .5]
@@ -610,9 +665,13 @@ if __name__ == '__main__':
 
         # create a model-free mdp to perform value prediction
         env = GeneralDeterministicGridWorldMDP(4, 4)
-
         num_actions = env.spec.num_actions
         num_states = env.spec.num_states
+
+        # env = gym.make('FrozenLake-v1')
+        # num_actions = env.action_space.n
+        # num_states = env.observation_space.n
+
         init_q = np.zeros((num_states, num_actions))
         behavior_policy = RandomPolicy(num_actions)
 
@@ -695,7 +754,7 @@ if __name__ == '__main__':
         for bpi_epsilon in epsilons:
             print(f'\nNumber of steps: {n}, alpha: {alpha}, behavior policy epsilon: {bpi_epsilon}, '
                   f'number of episodes: {n_episodes}:')
-            q, rewards, lengths, rmse = tree_backup(env, alpha, n_episodes, env.spec.num_actions, n, gamma=gamma,
+            q, rewards, lengths, rmse = tree_backup(env, alpha, n_episodes, num_actions, n, gamma=gamma,
                                                     init_q=init_q,
                                                     bpi_epsilon=bpi_epsilon,
                                                     q_star=q_star)
@@ -711,9 +770,9 @@ if __name__ == '__main__':
         for n in n_steps:
             print(f'\nNumber of steps: {n}, alpha: {alpha}, '
                   f'number of episodes: {n_episodes}:')
-            q, rewards, lengths, rmse = off_policy_sarsa(env, alpha, n_episodes, n, gamma=gamma,
-                                                         init_q=init_q,
-                                                         q_star=q_star)
+            q, rewards, lengths, rmse, _ = off_policy_sarsa(env, alpha, n_episodes, n, gamma=gamma,
+                                                            init_q=init_q,
+                                                            q_star=q_star)
             print(f'\n{q}')
 
             data[n] = {'r': rewards, 'l': lengths}
@@ -724,16 +783,16 @@ if __name__ == '__main__':
 
         # off policy sarsa has trouble with very small epsilon values for the e-greedy behavior policy,
         # so .01 was removed
-        epsilons = [.05, 1, .2, .3, .4, .5]
+        epsilons = [.05, .1, .2, .3, .4, .5]
 
         data = {}
         for bpi_epsilon in epsilons:
             print(f'\nNumber of steps: {n}, alpha: {alpha}, behavior policy epsilon: {bpi_epsilon}, '
                   f'number of episodes: {n_episodes}:')
-            q, rewards, lengths, rmse = off_policy_sarsa(env, alpha, n_episodes, n, gamma=gamma,
-                                                         init_q=init_q,
-                                                         bpi_epsilon=bpi_epsilon,
-                                                         q_star=q_star)
+            q, rewards, lengths, rmse, _ = off_policy_sarsa(env, alpha, n_episodes, n, gamma=gamma,
+                                                            init_q=init_q,
+                                                            bpi_epsilon=bpi_epsilon,
+                                                            q_star=q_star)
             data[bpi_epsilon] = {'r': rewards, 'l': lengths}
 
         render_figure(data, 100, 'bpi epsilon', 'off_policy_sarsa_by_bpi_epsilon')
@@ -755,9 +814,9 @@ if __name__ == '__main__':
 
         data['on-policy-sarsa'] = {'r': rewards, 'l': lengths}
 
-        _, rewards, lengths, _ = off_policy_sarsa(env, alpha, num_episodes, 3, epsilon, gamma=1.,
-                                                  init_q=np.zeros((env.observation_space.n,
-                                                                   env.action_space.n)))
+        _, rewards, lengths, _, _ = off_policy_sarsa(env, alpha, num_episodes, 3, epsilon, gamma=1.,
+                                                     init_q=np.zeros((env.observation_space.n,
+                                                                      env.action_space.n)))
 
         data['off-policy-sarsa'] = {'r': rewards, 'l': lengths}
 
