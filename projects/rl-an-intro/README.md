@@ -1214,3 +1214,21 @@ Off-policy action-state value prediction with weighted importance sampling from 
 ### Cliff Walking
 
 #### $4 \times 12$, starting state is in the lower-left and the goal/terminal state is in the lower-right
+
+## Planning and Learning with Tabular Methods
+
+#### For consistency across plots and environments, $episodes = 10000$, $\alpha = .001$, and $\epsilon = .01$ 
+
+### Dyna-Q
+
+#### Cliff Walking
+
+##### $4 \times 12$, starting state is in the lower-left and the goal/terminal state is in the lower-right
+
+![](images/cliff_walking_dyna_q_by_n.png)
+
+#### Grid World
+
+##### $4 \times 4$, starting randomly from a non-terminal state (i.e., 1-14) and the goal/terminal state is in the upper-left and lower-right (i.e., 0 and 15)
+
+![](images/gridworld_dyna_q_by_n.png)

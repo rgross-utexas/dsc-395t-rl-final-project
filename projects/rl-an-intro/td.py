@@ -8,8 +8,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from utils.env import EnvSpec
-from utils.mdp import CliffWalkingMDP, GeneralDeterministicGridWorldMDP
+from utils.mdp import GeneralDeterministicGridWorldMDP
 from utils.policy import DoubleEGreedyPolicy, EGreedyPolicy, RandomPolicy
 from utils.utils import generate_trajectories
 
@@ -24,12 +23,12 @@ def td_0_prediction(
 ) -> np.array:
     """
     input:
-        env_spec: environment spec
         trajs: trajectories generated using a given policy in which each element is a tuple representing
             (s_t,a_t,r_{t+1},s_{t+1})
         alpha: learning rate
         init_v: initial V values; np array shape of [num_states]
-    args:
+        gamma: discount factor
+    return:
         v: $v_pi$ function; numpy array shape of [num_states]
     """
 
@@ -52,12 +51,13 @@ def sarsa(
 ) -> Tuple[np.array, defaultdict, defaultdict]:
     """
     input:
-        env_spec: environment spec
+        env: environment
         alpha: learning rate
         epsilon: exploration rate
         num_episodes: number of episodes to run
         init_q: initial Q values; np array shape of [num_states,num_actions]
-    args:
+        gamma: discount factor
+    return:
         q: $q_star$ function; numpy array shape of [num_states,num_actions]
         episode_rewards: rewards by episode
         episode_lengths: episode lengths by episode
@@ -118,12 +118,13 @@ def expected_sarsa(
         gamma: float
 ) -> Tuple[np.array, defaultdict, defaultdict]:
     """
-    args:
-        env_spec: environment spec
+    input:
+        env: environment
         alpha: learning rate
         epsilon: exploration rate
         num_episodes: number of episodes to run
         init_q: initial Q values; np array shape of [num_states,num_actions]
+        gamma: discount factor
     return:
         q: $q_star$ function; numpy array shape of [num_states,num_actions]
         episode_rewards: rewards by episode
@@ -186,12 +187,13 @@ def q_learning(
         gamma: float = 1.
 ) -> Tuple[np.array, defaultdict, defaultdict]:
     """
-    args:
-        env_spec: environment spec
+    input:
+        env: environment
         alpha: learning rate
         epsilon: exploration rate
         num_episodes: number of episodes to run
         init_q: initial Q values; np array shape of [num_states,num_actions]
+        gamma: discount factor
     return:
         q: $q_star$ function; numpy array shape of [num_states,num_actions]
         episode_rewards: rewards by episode
@@ -246,12 +248,13 @@ def double_q_learning(
         gamma: float = 1.
 ) -> Tuple[np.array, defaultdict, defaultdict]:
     """
-    args:
-        env_spec: environment spec
+    input:
+        env: environment
         alpha: learning rate
         epsilon: exploration rate
         num_episodes: number of episodes to run
         init_q: initial Q values; np array shape of [num_states,num_actions]
+        gamma: discount factor
     return:
         q: $q_star$ function; numpy array shape of [num_states,num_actions]
         episode_rewards: rewards by episode
@@ -451,8 +454,6 @@ if __name__ == '__main__':
     env = gym.make('CliffWalking-v0')
 
     print('Cliff Walking:')
-
-    # TODO: Refactor this to something general
 
     epsilon = .1
     alpha = .5
