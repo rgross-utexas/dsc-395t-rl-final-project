@@ -1,7 +1,7 @@
 # Reinforcement Learning: An Introduction
 
 These are notes and results from implementations of various examples
-and algorithms from throughout the book.
+and algorithms from the book [Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf).
 
 ## Chapter 2: Multi-armed Bandits
 
