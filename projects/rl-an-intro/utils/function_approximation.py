@@ -1,36 +1,37 @@
+from abc import ABCMeta, abstractmethod
 from functools import reduce
 from typing import Tuple
 
 import numpy as np
 
 
-class ValueFunctionWithApproximation(object):
-    def __call__(self, s: np.array) -> float:
+class StateValueFunctionWithApproximation(object):
+    def __call__(self, state: np.array) -> float:
         """
-        return the value of given state
+        Return the value of given state
 
         input:
-            state: np.array
+            state: state apply get the value for
         return:
             value of the given state
         """
         raise NotImplementedError()
 
-    def update(self, alpha: float, g: float, s_t: np.array):
+    def update(self, alpha: float, g: float, state: np.array):
         """
         Perform the update
 
         input:
             alpha: learning rate
-            g: TD-target
-            s_t: target state for updating
+            g: reward
+            state: target state for updating
         return:
             None
         """
         raise NotImplementedError()
 
 
-class ValueFunctionWithTile(ValueFunctionWithApproximation):
+class StateValueFunctionWithTile(StateValueFunctionWithApproximation):
 
     def __init__(self,
                  state_low: np.array,
@@ -45,34 +46,41 @@ class ValueFunctionWithTile(ValueFunctionWithApproximation):
         """
 
         self.state_low = state_low
-        self.statde_high = state_high
+        self.state_high = state_high
         self.num_tilings = num_tilings
         self.tile_width = tile_width
         self.tiling_lows = [self.state_low - i / self.num_tilings * self.tile_width for i in range(self.num_tilings)]
         self.tiling_shape = (np.ceil((state_high - state_low) / tile_width) + 1).astype(int)
         self.weights = np.zeros([num_tilings] + self.tiling_shape.tolist())
 
-    def __call__(self, s):
-        return self._get_feature_weight(s)
-
-    def update(self, alpha, G, s_tau):
+    def __call__(self, state: np.array) -> float:
         """
-        Implement the update rule;
-        w <- w + \alpha[G- \hat{v}(s_tau;w)] \nabla\hat{v}(s_tau;w)
+        Return the value of given state
+
+        input:
+            state: state apply get the value for
+        return:
+            value of the given state
+        """
+        return self._get_feature_weight(state)
+
+    def update(self, alpha: float, g: float, state: np.array):
+        """
+        Apply update rule
 
         input:
             alpha: learning rate
-            G: TD-target
-            s_tau: target state for updating (yet, update will affect the other states)
-        ouptut:
+            g: reward
+            state: target state for updating
+        return:
             None
         """
 
         # the feature mask acts as the gradient
-        feature_weight, feature_mask = self._get_feature_weight_and_mask(s_tau)
+        feature_weight, feature_mask = self._get_feature_weight_and_mask(state)
 
         # w <- w + \alpha[G - \hat{v}(s_tau;w)] \nabla\hat{v}(s_tau;w)
-        error = G - feature_weight
+        error = g - feature_weight
         delta = alpha * error * feature_mask
         self.weights += delta
 
@@ -96,7 +104,13 @@ class ValueFunctionWithTile(ValueFunctionWithApproximation):
         return np.hstack((tiling_indices, tiles))
 
 
-class StateActionFeatureVectorWithTile():
+class StateActionFeatureVector(metaclass=ABCMeta):
+    @abstractmethod
+    def __call__(self, state: np.array, action: int, done:bool) -> np.array:
+        raise NotImplementedError()
+
+
+class StateActionFeatureVectorWithTile(StateActionFeatureVector):
 
     def __init__(self,
                  state_low: np.array,
@@ -106,7 +120,7 @@ class StateActionFeatureVectorWithTile():
                  num_tile_parts: int):
         """
         state_low: possible minimum value for each dimension in state
-        state_high: possible maimum value for each dimension in state
+        state_high: possible maximum value for each dimension in state
         num_actions: the number of possible actions
         num_tilings: # tilings
         num_tile_parts: number of parts to divide each tile by
@@ -119,8 +133,10 @@ class StateActionFeatureVectorWithTile():
         self.tile_width = (self.state_high - self.state_low) / num_tile_parts
         self.tiling_lows = [self.state_low - i / self.num_tilings * self.tile_width for i in range(self.num_tilings)]
         self.tiling_shape = (np.ceil((self.state_high - self.state_low) / self.tile_width) + 1).astype(int)
+
         weight_shape = [self.num_actions] + [self.num_tilings] + self.tiling_shape.tolist()
         self.weights = np.random.normal(loc=0, scale=2, size=tuple(weight_shape))
+
         self.feature_vector_length = reduce(lambda x, y: x * y, self.weights.shape)
         self.done_vector = np.zeros([self.feature_vector_length, 1])
 
@@ -130,16 +146,12 @@ class StateActionFeatureVectorWithTile():
         """
         return self.feature_vector_length
 
-    def __call__(self, s: np.array, a: int, done: bool) -> np.array:
-        """
-        implement function x: S+ x A -> [0,1]^d
-        if done is True, then return 0^d
-        """
+    def __call__(self, state: np.array, action: int, done: bool) -> np.array:
 
         if done:
             return self.done_vector
 
-        weights = self._get_feature_action_weights(s, a)
+        weights = self._get_feature_action_weights(state, action)
         flat_weights = np.reshape(weights, [-1, 1])
 
         return flat_weights
@@ -153,6 +165,7 @@ class StateActionFeatureVectorWithTile():
         tiles = self._map_state_to_tiles(state)
         mask = np.zeros(self.weights[action].shape)
         flat_weight_indices = np.ravel_multi_index(tiles.T, mask.shape)
+
         np.ravel(mask)[flat_weight_indices] = 1
 
         weights = np.zeros_like(self.weights)

@@ -1232,3 +1232,11 @@ Off-policy action-state value prediction with weighted importance sampling from 
 ##### $4 \times 4$, starting randomly from a non-terminal state (i.e., 1-14) and the goal/terminal state is in the upper-left and lower-right (i.e., 0 and 15)
 
 ![](images/gridworld_dyna_q_by_n.png)
+
+## On-policy Control with Approximation
+
+### Sarsa Lambda with Tile Coding
+
+#### Mountain Car
+
+![](images/mountain_car_sarsa_lambda_with_tile_function_approximation.png)

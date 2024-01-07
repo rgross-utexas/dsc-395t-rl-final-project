@@ -1,9 +1,18 @@
+from collections import defaultdict
+from typing import Dict, List, Tuple
+
+import cv2
 import gymnasium as gym
 from gymnasium import Env
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import torch.utils.tensorboard as tb
 from tqdm import tqdm
 
-from utils.function_approximation import StateActionFeatureVectorWithTile
+from utils.function_approximation import StateActionFeatureVector, StateActionFeatureVectorWithTile
+
+TB = True
 
 
 def sarsa_lambda(
@@ -11,84 +20,172 @@ def sarsa_lambda(
         gamma: float,  # discount factor
         lam: float,  # decay rate
         alpha: float,  # step size
-        X: StateActionFeatureVectorWithTile,
+        X: StateActionFeatureVector,
         num_episodes: int,
-) -> np.array:
+        render: bool = False,
+        render_cadence: int = 50
+) -> Tuple[np.array, Dict]:
 
-    # id = "tb/4_eps_05_normal_3_0"
-    # if TB:
-    #     tb_logger = tb.SummaryWriter(id, flush_secs=5)
+    env_id = env.spec.id
+    print(f'{env_id=}')
+    id = f"tb/{env_id}"
+    if TB:
+        tb_logger = tb.SummaryWriter(id, flush_secs=5)
 
-    def epsilon_greedy_policy(_s, _done, _w, _epsilon=.0):
+    episode_data = {}
+
+    episode_lengths = defaultdict(float)
+    episode_rewards = defaultdict(float)
+    episode_frames = defaultdict(List)
+
+    episode_data['lengths'] = episode_lengths
+    episode_data['rewards'] = episode_rewards
+    episode_data['frames'] = episode_frames
+
+    def epsilon_greedy_policy(state: np.array, done: bool, w: np.array, epsilon: float = .05):
 
         num_actions = env.action_space.n
-        if np.random.rand() < _epsilon:
+        if np.random.rand() < epsilon:
             return np.random.randint(num_actions)
         else:
-            q = [np.dot(w, X(_s, _a, _done)) for _a in range(num_actions)]
+            q = [np.dot(w, X(state, action, done)) for action in range(num_actions)]
             return np.argmax(q)
+
+    policy_fn = epsilon_greedy_policy
 
     # initialize weight vector
     w = np.reshape(np.zeros((X.feature_vector_len())), [1, -1])
 
-    counter = 0
     for e in tqdm(range(num_episodes)):
 
-        # if DEBUG:
-        #     print(f'Processing episode {e + 1}...')
+        frames = []
+        episode_frames[e] = frames
 
         s = env.reset()
-        done = False
-        a = epsilon_greedy_policy(_s=s, _done=done,
-                                  _w=w, _epsilon=0.05)
-        x = X(s, a, done)
+        a = policy_fn(state=s, done=False, w=w)
+        x = X(state=s, action=a, done=False)
 
         z = np.zeros_like(w)
-        q_old = 0
-
+        q = 0
         t = 0
+
+        if render and (e + 1) % render_cadence == 0:
+            frames.append(env.render())
+
         while True:
 
-            t += 1
+            # take a step
+            s1, r1, done, _, _ = env.step(a)
 
-            s_prime, r, done, _, _ = env.step(a)
-            a_prime = epsilon_greedy_policy(_s=s_prime, _done=done,
-                                            _w=w, _epsilon=0.05)
-            x_prime = X(s_prime, a_prime, done)
+            # track the rewards for this episode
+            episode_rewards[e] += r1
 
-            q = float(np.dot(w, x))
-            q_prime = float(np.dot(w, x_prime))
+            if render and (e + 1) % render_cadence == 0:
+                frames.append(env.render())
 
-            delta = r + gamma * q_prime - q
+            # calculate new X
+            a1 = policy_fn(state=s1, done=done, w=w)
+            x1 = X(state=s1, action=a1, done=done)
+
+            q0 = np.reshape(np.dot(w, x), [1, -1])[0]
+            q1 = np.reshape(np.dot(w, x1), [1, -1])[0]
+
+            # perform update
+            delta = r1 + gamma * q1 - q0
             z = gamma * lam * z + (1 - alpha * gamma * lam * np.dot(z, x)) * x.T
-            w = w + alpha * (delta + q - q_old) * z - alpha * (q - q_old) * x.T
+            w = w + alpha * (delta + q0 - q) * z - alpha * (q0 - q) * x.T
 
-            q_old = q_prime
-            x = x_prime
-            a = a_prime
+            # update values for next iteration
+            q = q1
+            x = x1
+            a = a1
 
-            counter += 1
+            # track episode length
+            episode_lengths[e] = t
 
             if done:
                 break
 
-        # if TB:
-        #     tb_logger.add_scalar('Q', Q, global_step=counter)
-        #     tb_logger.add_scalar('delta', delta, global_step=counter)
-        #     tb_logger.add_scalar('e_length', e_length, global_step=counter)
-        #
-        # if DEBUG:
-        #     print(f'Processed episode of length {e_length}.')
+            t += 1
 
-    # if DEBUG:
-    #     print(f'id: {id}')
+        if TB:
+            tb_logger.add_scalar('length', episode_lengths[e], global_step=e)
+            tb_logger.add_scalar('reward', episode_rewards[e], global_step=e)
 
-    return w
+    return w, episode_data
+
+
+def save_frames_as_video(episode_frames: defaultdict, run_type: str, algorithm: str, render_cadence: int = 50,
+                         filename_template: str = './{algorithm}_episode_{episode}_of_{total}.mp4'):
+    for i, frames in episode_frames.items():
+
+        if len(frames) > 0:
+            np_frames = np.array(frames)
+            save_episode_as_video(algorithm, len(episode_frames), filename_template, i, np_frames, run_type)
+
+
+def save_episode_as_video(algorithm, num_episodes, filename_template, episode, np_frames, run_type):
+    filename = filename_template.format(run_type=run_type, algorithm=algorithm, episode=(episode + 1),
+                                        total=num_episodes)
+    fps = 10
+    height = np_frames.shape[2]
+    width = np_frames.shape[1]
+    out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), fps, (height, width))
+    for i in range(np_frames.shape[0]):
+        data = np_frames[i, :, :, :]
+        # data = cv2.cvtColor(data, cv2.COLOR_RGB2BGR)
+        out.write(data)
+    out.release()
+
+
+def render_figure(data: Dict, window: int, label: str, filename: str):
+    # render the figure and write it to file
+    fig, axes = plt.subplots(2, 1)
+    fig.set_figwidth(12)
+    fig.set_figheight(12)
+
+    for value, d in data.items():
+        rewards = pd.Series(d['r'].values()).rolling(window, min_periods=window).mean().to_numpy()
+        lengths = pd.Series(d['l'].values()).rolling(window, min_periods=window).mean().to_numpy()
+
+        axes[0].plot(rewards, label=f'{label}={value}')
+        axes[1].plot(lengths, label=f'{label}={value}')
+
+    axes[0].legend(loc='lower right')
+    axes[0].title.set_text(f"Reward per Episode Over Time ({window} step rolling average)")
+    axes[1].legend(loc='upper right')
+    axes[1].title.set_text(f"Episode Length Over Time ({window} step rolling average)")
+
+    plt.savefig(filename.replace('.', 'p'))
 
 
 if __name__ == '__main__':
 
-    env = gym.make("MountainCar-v0", render_mode="human")
+    run_type_lookup = {
+        'mountain_car': {'gym_type': 'MountainCar-v0',
+                         'num_episodes': 2000,
+                         'num_tile_parts': 4
+                         },
+        'lunar_lander': {'gym_type': 'LunarLander-v2',
+                         'num_episodes': 500,
+                         'num_tile_parts': 4
+                         },
+    }
+
+    render_mode = 'rgb_array'
+    render = True
+    render_cadence = 200
+    num_tilings = 10
+    algorithm = 'sarsa_lambda'
+    filename_template = '{run_type}_{algorithm}_episode_{episode}_of_{total}.mp4'
+
+    run_type = "mountain_car"
+    run_config = run_type_lookup[run_type]
+    gym_type = run_config['gym_type']
+    num_episodes = run_config['num_episodes']
+    num_tile_parts = run_config['num_tile_parts']
+
+    env = gym.make(gym_type, render_mode=render_mode)
     env.metadata['render_fps'] = 120
 
     gamma = 1.
@@ -97,31 +194,115 @@ if __name__ == '__main__':
         env.observation_space.low,
         env.observation_space.high,
         env.action_space.n,
-        num_tilings=10,
-        num_tile_parts=4
+        num_tilings=num_tilings,
+        num_tile_parts=num_tile_parts
     )
 
-    w = sarsa_lambda(env, gamma, 0.8, 0.01, X, 2000)
+    w, d = sarsa_lambda(env, gamma, lam=0.8, alpha=0.01, X=X, num_episodes=num_episodes,
+                        render=render, render_cadence=render_cadence)
+
+    if render_mode == 'rgb_array':
+        save_frames_as_video(d['frames'], run_type=run_type, algorithm=algorithm,
+                             render_cadence=render_cadence,
+                             filename_template=filename_template)
+
+    data = {run_type: {'r': d['rewards'], 'l': d['lengths']}}
+
+    window = 25
+    render_figure(data, window, 'gym', f'{run_type}_sarsa_lambda_with_tile_function_approximation')
+
+    env = gym.make(gym_type, render_mode="rgb_array")
+    env.metadata['render_fps'] = 120
+
+    frames = []
+
 
     def greedy_policy(s, done):
-        Q = [np.dot(w, X(s, done, a)) for a in range(env.action_space.n)]
+        Q = [np.dot(w, X(s, a, done)) for a in range(env.action_space.n)]
         return np.argmax(Q)
 
 
-    def _eval(render=True):
+    def eval(render=False):
         s, done = env.reset(), False
-        if render: env.render()
+        if render:
+            frames.append(env.render())
 
         G = 0.
         while not done:
             a = greedy_policy(s, done)
-            s, r, done, _ = env.step(a)
-            if render: env.render()
+            s, r, done, _, _ = env.step(a)
+            if render:
+                frames.append(env.render())
 
             G += r
-
         return G
 
 
-    Gs = [_eval() for _ in range(100)]
-    G_rendered = _eval(True)
+    eval(render=True)
+
+    save_episode_as_video(algorithm=algorithm, num_episodes=1, filename_template=filename_template,
+                          np_frames=np.array(frames), run_type=run_type, episode=1)
+
+    # run_type = "lunar_lander"
+    # run_config = run_type_lookup[run_type]
+    # gym_type = run_config['gym_type']
+    # num_episodes = run_config['num_episodes']
+    # num_tile_parts = run_config['num_tile_parts']
+    #
+    # env = gym.make(gym_type, render_mode=render_mode)
+    # env.metadata['render_fps'] = 120
+    #
+    # gamma = 1.
+    #
+    # X = StateActionFeatureVectorWithTile(
+    #     env.observation_space.low,
+    #     env.observation_space.high,
+    #     env.action_space.n,
+    #     num_tilings=num_tilings,
+    #     num_tile_parts=num_tile_parts
+    # )
+    #
+    # w, d = sarsa_lambda(env, gamma, lam=0.8, alpha=0.01, X=X, num_episodes=num_episodes,
+    #                     render=render, render_cadence=render_cadence)
+    #
+    # if render_mode == 'rgb_array':
+    #     save_frames_as_video(d['frames'], run_type=run_type, algorithm=algorithm,
+    #                          render_cadence=render_cadence,
+    #                          filename_template=filename_template)
+    #
+    # data = {run_type: {'r': d['rewards'], 'l': d['lengths']}}
+    #
+    # window = 25
+    # render_figure(data, window, 'gym', run_type)
+    #
+    # env = gym.make(gym_type, render_mode="rgb_array")
+    # env.metadata['render_fps'] = 120
+    #
+    # frames = []
+    #
+    #
+    # def greedy_policy(s, done):
+    #     Q = [np.dot(w, X(s, a, done)) for a in range(env.action_space.n)]
+    #     return np.argmax(Q)
+    #
+    #
+    # def eval(render=False):
+    #     s, done = env.reset(), False
+    #     if render:
+    #         frames.append(env.render())
+    #
+    #     G = 0.
+    #     while not done:
+    #         a = greedy_policy(s, done)
+    #         s, r, done, _, _ = env.step(a)
+    #         if render:
+    #             frames.append(env.render())
+    #
+    #         G += r
+    #     return G
+    #
+    #
+    # eval(render=True)
+    #
+    # save_episode_as_video(algorithm=algorithm, num_episodes=1, filename_template=filename_template,
+    #                       np_frames=np.array(frames), run_type=run_type, episode=1)
