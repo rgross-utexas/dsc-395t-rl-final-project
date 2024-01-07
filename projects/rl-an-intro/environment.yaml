@@ -1,19 +1,15 @@
 name: rl-an-intro
 channels:
-  - pytorch
   - defaults
   - conda-forge
 dependencies:
-  - gymnasium
-  - imageio
-  - imageio-ffmpeg
-  - opencv
-  - pandas
-  - python=3.11
-  - pillow
+  - gymnasium-all
   - matplotlib
   - numpy
-  - pip
+  - opencv
+  - pandas
+  - pillow
+  - python=3.11
+  - pytorch
+  - tensorboard
   - tqdm
-  - pip:
-    - gymnasium[toy-text]
