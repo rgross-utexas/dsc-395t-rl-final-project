@@ -56,7 +56,7 @@ def sarsa_lambda(
     # initialize weight vector
     w = np.reshape(np.zeros((X.feature_vector_len())), [1, -1])
 
-    for e in tqdm(range(num_episodes)):
+    for e in tqdm(range(num_episodes), ascii=True, unit='episodes'):
 
         frames = []
         episode_frames[e] = frames
@@ -163,7 +163,7 @@ if __name__ == '__main__':
 
     run_type_lookup = {
         'mountain_car': {'gym_type': 'MountainCar-v0',
-                         'num_episodes': 2000,
+                         'num_episodes': 1000,
                          'num_tile_parts': 4
                          },
         'lunar_lander': {'gym_type': 'LunarLander-v2',
@@ -172,9 +172,9 @@ if __name__ == '__main__':
                          },
     }
 
-    render_mode = 'rgb_array'
-    render = True
-    render_cadence = 200
+    render_mode = None  # 'rgb_array'
+    render = False
+    render_cadence = 100
     num_tilings = 10
     algorithm = 'sarsa_lambda'
     filename_template = '{run_type}_{algorithm}_episode_{episode}_of_{total}.mp4'
@@ -188,8 +188,6 @@ if __name__ == '__main__':
     env = gym.make(gym_type, render_mode=render_mode)
     env.metadata['render_fps'] = 120
 
-    gamma = 1.
-
     X = StateActionFeatureVectorWithTile(
         env.observation_space.low,
         env.observation_space.high,
@@ -198,111 +196,126 @@ if __name__ == '__main__':
         num_tile_parts=num_tile_parts
     )
 
-    w, d = sarsa_lambda(env, gamma, lam=0.8, alpha=0.01, X=X, num_episodes=num_episodes,
-                        render=render, render_cadence=render_cadence)
+    gammas = [1, .999, .995, .99]
+    lambdas = [.9, .8, .7, .6, .5]
 
-    if render_mode == 'rgb_array':
-        save_frames_as_video(d['frames'], run_type=run_type, algorithm=algorithm,
-                             render_cadence=render_cadence,
-                             filename_template=filename_template)
+    gamma = 1.
+    lam = .8
 
-    data = {run_type: {'r': d['rewards'], 'l': d['lengths']}}
+    # gammas
 
-    window = 25
-    render_figure(data, window, 'gym', f'{run_type}_sarsa_lambda_with_tile_function_approximation')
+    data = {}
+    ws = []
+    for gamma in gammas:
+
+        w, d = sarsa_lambda(env, gamma=gamma, lam=lam, alpha=0.01, X=X, num_episodes=num_episodes,
+                            render=render, render_cadence=render_cadence)
+        ws.append(w)
+
+        if render_mode == 'rgb_array':
+            save_frames_as_video(d['frames'], run_type=run_type, algorithm=algorithm,
+                                 render_cadence=render_cadence,
+                                 filename_template=filename_template)
+
+        data[gamma] = {'r': d['rewards'], 'l': d['lengths']}
+
+
+    window = 100
+    render_figure(data, window, 'gamma', f'{run_type}_sarsa_lambda_with_tile_function_approximation_by_gamma')
+
+    # render some videos from the resulting weights
 
     env = gym.make(gym_type, render_mode="rgb_array")
     env.metadata['render_fps'] = 120
 
-    frames = []
+    filename_template = '{run_type}_{algorithm}_gamma_{value}.mp4'
 
-
-    def greedy_policy(s, done):
-        Q = [np.dot(w, X(s, a, done)) for a in range(env.action_space.n)]
+    def greedy_policy(_w, s, done):
+        Q = [np.dot(_w, X(s, a, done)) for a in range(env.action_space.n)]
         return np.argmax(Q)
 
 
-    def eval(render=False):
+    def evaluate_w(_w, render=False):
+
+        frames = []
+
         s, done = env.reset(), False
         if render:
             frames.append(env.render())
 
-        G = 0.
         while not done:
-            a = greedy_policy(s, done)
+            a = greedy_policy(_w, s, done)
             s, r, done, _, _ = env.step(a)
             if render:
                 frames.append(env.render())
 
-            G += r
-        return G
+        return frames
 
 
-    eval(render=True)
+    for i, w in enumerate(ws):
 
-    save_episode_as_video(algorithm=algorithm, num_episodes=1, filename_template=filename_template,
-                          np_frames=np.array(frames), run_type=run_type, episode=1)
+        frames = evaluate_w(w, render=True)
 
-    # run_type = "lunar_lander"
-    # run_config = run_type_lookup[run_type]
-    # gym_type = run_config['gym_type']
-    # num_episodes = run_config['num_episodes']
-    # num_tile_parts = run_config['num_tile_parts']
-    #
-    # env = gym.make(gym_type, render_mode=render_mode)
-    # env.metadata['render_fps'] = 120
-    #
-    # gamma = 1.
-    #
-    # X = StateActionFeatureVectorWithTile(
-    #     env.observation_space.low,
-    #     env.observation_space.high,
-    #     env.action_space.n,
-    #     num_tilings=num_tilings,
-    #     num_tile_parts=num_tile_parts
-    # )
-    #
-    # w, d = sarsa_lambda(env, gamma, lam=0.8, alpha=0.01, X=X, num_episodes=num_episodes,
-    #                     render=render, render_cadence=render_cadence)
-    #
-    # if render_mode == 'rgb_array':
-    #     save_frames_as_video(d['frames'], run_type=run_type, algorithm=algorithm,
-    #                          render_cadence=render_cadence,
-    #                          filename_template=filename_template)
-    #
-    # data = {run_type: {'r': d['rewards'], 'l': d['lengths']}}
-    #
-    # window = 25
-    # render_figure(data, window, 'gym', run_type)
-    #
-    # env = gym.make(gym_type, render_mode="rgb_array")
-    # env.metadata['render_fps'] = 120
-    #
-    # frames = []
-    #
-    #
-    # def greedy_policy(s, done):
-    #     Q = [np.dot(w, X(s, a, done)) for a in range(env.action_space.n)]
-    #     return np.argmax(Q)
-    #
-    #
-    # def eval(render=False):
-    #     s, done = env.reset(), False
-    #     if render:
-    #         frames.append(env.render())
-    #
-    #     G = 0.
-    #     while not done:
-    #         a = greedy_policy(s, done)
-    #         s, r, done, _, _ = env.step(a)
-    #         if render:
-    #             frames.append(env.render())
-    #
-    #         G += r
-    #     return G
-    #
-    #
-    # eval(render=True)
-    #
-    # save_episode_as_video(algorithm=algorithm, num_episodes=1, filename_template=filename_template,
-    #                       np_frames=np.array(frames), run_type=run_type, episode=1)
+        filename = filename_template.format(run_type = run_type, algorithm = algorithm, value = gammas[i])
+
+        save_episode_as_video(algorithm=algorithm, num_episodes=1, filename_template=filename,
+                              np_frames=np.array(frames), run_type=run_type, episode=1)
+
+    # lambdas
+
+    data = {}
+    ws = []
+    for lam in lambdas:
+
+        w, d = sarsa_lambda(env, gamma=gamma, lam=lam, alpha=0.01, X=X, num_episodes=num_episodes,
+                            render=render, render_cadence=render_cadence)
+        ws.append(w)
+
+        if render_mode == 'rgb_array':
+            save_frames_as_video(d['frames'], run_type=run_type, algorithm=algorithm,
+                                 render_cadence=render_cadence,
+                                 filename_template=filename_template)
+
+        data[lam] = {'r': d['rewards'], 'l': d['lengths']}
+
+
+    window = 100
+    render_figure(data, window, 'lambda', f'{run_type}_sarsa_lambda_with_tile_function_approximation_by_lambda')
+
+    # render some videos from the resulting weights
+
+    env = gym.make(gym_type, render_mode="rgb_array")
+    env.metadata['render_fps'] = 120
+
+    filename_template = '{run_type}_{algorithm}_lambda_{value}.mp4'
+
+    def greedy_policy(_w, s, done):
+        Q = [np.dot(_w, X(s, a, done)) for a in range(env.action_space.n)]
+        return np.argmax(Q)
+
+
+    def evaluate_w(_w, render=False):
+
+        frames = []
+
+        s, done = env.reset(), False
+        if render:
+            frames.append(env.render())
+
+        while not done:
+            a = greedy_policy(_w, s, done)
+            s, r, done, _, _ = env.step(a)
+            if render:
+                frames.append(env.render())
+
+        return frames
+
+
+    for i, w in enumerate(ws):
+
+        frames = evaluate_w(w, render=True)
+
+        filename = filename_template.format(run_type = run_type, algorithm = algorithm, value = lambdas[i])
+
+        save_episode_as_video(algorithm=algorithm, num_episodes=1, filename_template=filename,
+                              np_frames=np.array(frames), run_type=run_type, episode=1)
