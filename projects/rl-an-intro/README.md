@@ -1233,10 +1233,16 @@ Off-policy action-state value prediction with weighted importance sampling from 
 
 ![](images/gridworld_dyna_q_by_n.png)
 
-## On-policy Control with Approximation
+## Eligibility Traces
 
-### Sarsa Lambda with Tile Coding
+### Sarsa Lambda with Tile Coding Function Approximation
 
 #### Mountain Car
 
-![](images/mountain_car_sarsa_lambda_with_tile_function_approximation.png)
+##### $\gamma$ varies over [1, .999, .995, .99], $\lambda = .8$
+
+![](images/mountain_car_sarsa_lambda_with_tile_function_approximation_by_gamma.png)
+
+##### $\lambda varies over [.9, .8, .7, .6, .5], $\gamma = 1.0$
+
+![](images/mountain_car_sarsa_lambda_with_tile_function_approximation_by_lambda.png)
