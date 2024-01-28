@@ -170,9 +170,7 @@ def dqn(env: Env,
             update_target_weights(behavior_net, target_net, tau)
 
             if terminated or truncated:
-                # episode_durations.append(t + 1)
                 episode_data['lengths'][e] = t + 1
-                # plot_durations()
 
                 break
 
