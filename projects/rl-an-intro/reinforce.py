@@ -206,6 +206,8 @@ def generate_video(env_spec_id: str, policy_net: PolicyNetwork, episode: int) ->
 
     out.release()
 
+
+# TODO: Refactor this to make it useful or remove it
 def plot_data(num_steps: List[int], avg_steps: List[float],
               episode: int, env: Env, total_reward: float) -> None:
 
@@ -247,7 +249,7 @@ def run(**kwargs: Dict) -> None:
 
     num_steps = []
     avg_steps = []
-    all_rewards = []
+    rewards_sum = []
 
     counter = 0
     for episode in tqdm(range(num_episodes), unit='episodes'):
@@ -269,9 +271,6 @@ def run(**kwargs: Dict) -> None:
             new_state, reward, terminated, truncated, _ = env.step(action)
             rewards.append(reward)
 
-            tb_logger.add_scalar('log_prob', log_prob, global_step=counter)
-            tb_logger.add_scalar('reward', reward, global_step=counter)
-
             # if we have completed the run (terminated) or gone too many steps (truncated),
             # update the policy
             if terminated or truncated:
@@ -282,19 +281,16 @@ def run(**kwargs: Dict) -> None:
                 # record the step and reward data
                 num_steps.append(step)
                 avg_steps.append(np.mean(num_steps[-ROLLING_AVERAGE_LENGTH:]))
-                rewards_sum = np.sum(rewards)
-                all_rewards.append(rewards_sum)
+                rewards_sum.append(np.sum(rewards))
 
-                tb_logger.add_scalar('rewards_sum', rewards_sum, global_step=counter)
-                tb_logger.add_scalar('num_steps', step, global_step=counter)
-                tb_logger.add_scalar('episode', episode, global_step=counter)
+                # episode indexed metrics
+                tb_logger.add_scalar('e_rewards_sum', rewards_sum[-1], global_step=episode)
+                tb_logger.add_scalar('e_num_steps', num_steps[-1], global_step=episode)
 
                 # log information every NUMBER_OF_LOGS episodes
                 if (episode + 1) % (num_episodes//NUMBER_OF_LOGS) == 0:
-                    total_reward = np.round(np.sum(rewards), decimals=3)
-                    avg_reward = np.round(np.mean(all_rewards[-ROLLING_AVERAGE_LENGTH:]), decimals=3)
-                    logger.info(f"episode: {episode + 1}, reward: {total_reward}, "
-                                f"average reward: {avg_reward}, length: {step}, average length: {avg_steps[-1]}")
+                    logger.info(f"episode: {episode + 1}, reward: {np.round(np.sum(rewards), decimals=3)}, "
+                                f"length: {step}, average length: {avg_steps[-1]}")
 
                 # from time to time, generate a video
                 if (episode + 1) % (num_episodes//num_videos) == 0:
@@ -302,19 +298,18 @@ def run(**kwargs: Dict) -> None:
 
                 break
 
+            # counter indexed metrics
+            tb_logger.add_scalar('log_prob', log_prob, global_step=counter)
+            tb_logger.add_scalar('reward', reward, global_step=counter)
+
             counter += 1
 
             # update the state
             state = new_state
 
-        tb_logger.add_scalar('e_all_rewards', all_rewards[-1], global_step=episode)
-        tb_logger.add_scalar('e_num_steps', num_steps[-1], global_step=episode)
-        tb_logger.add_scalar('e_avg_steps', avg_steps[-1], global_step=episode)
-        tb_logger.add_scalar('e_total_reward', step, global_step=episode)
-
 
     # plot the step data so we can see how we did
-    plot_data(num_steps, avg_steps, episode, env, total_reward)
+    plot_data(num_steps, avg_steps, episode, env, rewards_sum)
 
 
 def parse_args() -> argparse.Namespace:
