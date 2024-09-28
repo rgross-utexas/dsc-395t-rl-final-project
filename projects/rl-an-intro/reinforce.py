@@ -21,10 +21,7 @@ from torch.autograd import Variable
 from torch.optim import Adam, Optimizer
 from torch.utils.tensorboard import SummaryWriter
 
-# load the settings
-settings = Dynaconf(
-    settings_files=['settings.yaml', '.secrets.yaml'],
-)
+from config import settings
 
 # set up simple logging
 logging.basicConfig(filename=f'reinforce_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log',
