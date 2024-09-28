@@ -21,10 +21,8 @@ from torch.autograd import Variable
 from torch.optim import Adam, Optimizer
 from torch.utils.tensorboard import SummaryWriter
 
-# load the reinforce environment
+# load the settings
 settings = Dynaconf(
-    environments=True,
-    default_env="reinforce",
     settings_files=['settings.yaml', '.secrets.yaml'],
 )
 
@@ -284,7 +282,7 @@ def main():
     logger.info('Starting...')
 
     # run each given environment
-    for env in settings.envs:
+    for env in settings.reinforce.envs:
         env_dict = dict(env)
         logger.info(f'Running {env_dict}...')
         run(**env_dict)
