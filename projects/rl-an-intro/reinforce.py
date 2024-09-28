@@ -4,12 +4,10 @@ REINFORCE is a Monte Carlo-based policy-gradient Reinforcement Learning algorith
 import argparse
 from datetime import datetime
 import itertools
-import logging
 from tqdm import tqdm
 from typing import Dict, List, Tuple
 
 import cv2
-from dynaconf import Dynaconf
 import gymnasium as gym
 from gymnasium import Env
 import matplotlib.pyplot as plt
@@ -22,12 +20,7 @@ from torch.optim import Adam, Optimizer
 from torch.utils.tensorboard import SummaryWriter
 
 from config import settings
-
-# set up simple logging
-logging.basicConfig(filename=f'reinforce_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log',
-                    format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
-                    level=logging.INFO)
-logger = logging.getLogger(__name__)
+from logger import logger
 
 # for smoothing out the data that displayed data
 ROLLING_AVERAGE_LENGTH = 10
@@ -145,7 +138,7 @@ def generate_video(env_spec_id: str, policy_net: PolicyNetwork, episode: int) ->
         state = new_state
 
     np_frames = np.array(frames)
-    filename = f'reinforce_{env.spec.id}_{episode + 1}_episodes_{int(total_reward)}_reward.mp4'
+    filename = f'output/reinforce_{env.spec.id}_{episode + 1}_episodes_{int(total_reward)}_reward.mp4'
     logger.info(f'Generating video at {filename=}...')
 
     fps = 30
@@ -168,7 +161,7 @@ def plot_data(num_steps: List[int], avg_steps: List[float],
     plt.plot(avg_steps)
     plt.xlabel('Episode')
     plt.xlabel('Steps')
-    plt.savefig(f'reinforce_{env.spec.id}_{episode + 1}_episodes_{int(total_reward)}_reward.png')
+    plt.savefig(f'output/reinforce_{env.spec.id}_{episode + 1}_episodes_{int(total_reward)}_reward.png')
     plt.clf()
 
 
