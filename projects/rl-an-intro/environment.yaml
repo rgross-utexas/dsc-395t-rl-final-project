@@ -3,6 +3,7 @@ channels:
   - defaults
   - conda-forge
 dependencies:
+  - dynaconf
   - gymnasium-all
   - matplotlib
   - numpy

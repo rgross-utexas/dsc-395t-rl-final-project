@@ -9,6 +9,7 @@ from tqdm import tqdm
 from typing import Dict, List, Tuple
 
 import cv2
+from dynaconf import Dynaconf
 import gymnasium as gym
 from gymnasium import Env
 import matplotlib.pyplot as plt
@@ -19,6 +20,13 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.optim import Adam, Optimizer
 from torch.utils.tensorboard import SummaryWriter
+
+# load the reinforce environment
+settings = Dynaconf(
+    environments=True,
+    default_env="reinforce",
+    settings_files=['settings.yaml', '.secrets.yaml'],
+)
 
 # set up simple logging
 logging.basicConfig(filename=f'reinforce_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log',
@@ -31,56 +39,6 @@ ROLLING_AVERAGE_LENGTH = 10
 
 # how many times to log the status during a run
 NUMBER_OF_LOGS = 100
-
-# configuration map for various gymnasium runs
-# TODO: Externalize this config
-CONFIG_MAP = {
-    'acrobat': {
-        # https://gymnasium.farama.org/environments/classic_control/acrobot/
-        # "The reward threshold is -100"
-        'env_spec_id': 'Acrobot-v1',
-        'inner_dims': 128,
-        'num_episodes': 1000,
-        'lr': 3e-4,
-        'gamma': .999,
-        'max_lookahead': 100,
-        'num_videos': 20,
-    },
-    'mountain_car': {
-        # https://gymnasium.farama.org/environments/classic_control/mountain_car/
-        # "Termination: The position of the car is greater than or equal to 0.5 (the goal position on top of the right hill)"
-        'env_spec_id': 'MountainCar-v0',
-        'inner_dims': 128,
-        'num_episodes': 5000,
-        'lr': 3e-4,
-        'gamma': 1,
-        'max_lookahead': 1000,
-        'num_videos': 20,
-    },
-    'cart_pole': {
-        # https://gymnasium.farama.org/environments/classic_control/cart_pole/
-        # "The threshold for rewards is 500 for v1"
-        'env_spec_id': 'CartPole-v1',
-        'inner_dims': 512,
-        'num_episodes': 2000,
-        'lr': 3e-4,
-        'gamma': 1,
-        'max_lookahead': 100,
-        'num_videos': 20,
-    },
-    'lunar_lander': {
-        # https://gymnasium.farama.org/environments/box2d/lunar_lander/
-        # "An episode is considered a solution if it scores at least 200 points."
-        'env_spec_id': 'LunarLander-v2',
-        'inner_dims': 256,
-        'num_episodes': 6000,
-        'lr': 3e-4,
-        'gamma': 1,
-        'max_lookahead': 100,
-        'num_videos': 20,
-    }
-}
-
 
 class PolicyNetwork(nn.Module):
     """
@@ -107,7 +65,7 @@ class PolicyNetwork(nn.Module):
 
     def get_action_log_prob(self: nn.Module, state: np.ndarray) -> Tuple[int, torch.Tensor]:
 
-        # get the current state-action probability distribution for the given state
+        # get the current action probability distribution for the given state
         state = torch.from_numpy(state).float().unsqueeze(0)
         probs = self.forward(Variable(state))
 
@@ -206,7 +164,6 @@ def generate_video(env_spec_id: str, policy_net: PolicyNetwork, episode: int) ->
 
     out.release()
 
-
 # TODO: Refactor this to make it useful or remove it
 def plot_data(num_steps: List[int], avg_steps: List[float],
               episode: int, env: Env, total_reward: float) -> None:
@@ -300,6 +257,7 @@ def run(**kwargs: Dict) -> None:
 
             # counter indexed metrics
             tb_logger.add_scalar('log_prob', log_prob, global_step=counter)
+            tb_logger.add_scalar('prob', torch.exp(log_prob), global_step=counter)
             tb_logger.add_scalar('reward', reward, global_step=counter)
 
             counter += 1
@@ -315,8 +273,7 @@ def run(**kwargs: Dict) -> None:
 def parse_args() -> argparse.Namespace:
 
     parser = argparse.ArgumentParser(prog='reinforce')
-    parser.add_argument('--envs', nargs='+',
-                        default=CONFIG_MAP.keys())
+    # currently there are no args to parse
     args = parser.parse_args()
 
     return args
@@ -326,15 +283,11 @@ def main():
 
     logger.info('Starting...')
 
-    # run each given envvironment
-    args = parse_args()
-    for env in args.envs:
-        config = CONFIG_MAP.get(env)
-        if config is not None:
-            logger.info(f'Running {config}...')
-            run(**config)
-        else:
-            logger.warn(f"Unable to find {env=}. Skipping...")
+    # run each given environment
+    for env in settings.envs:
+        env_dict = dict(env)
+        logger.info(f'Running {env_dict}...')
+        run(**env_dict)
 
     logger.info('Done.')
 
