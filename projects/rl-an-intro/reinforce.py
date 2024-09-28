@@ -271,6 +271,9 @@ def main():
 
     logger.info('Starting...')
 
+    # this just a place holder for if/when we need cl args
+    _ = parse_args()
+
     # run each given environment
     for env in settings.reinforce.envs:
         env_dict = dict(env)
