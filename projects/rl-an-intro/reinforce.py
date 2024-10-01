@@ -32,21 +32,29 @@ class PolicyNetwork(nn.Module):
     """
     Simple, fully connected 2-layer NeuralNetwork. The input features are dependent on the
     number of states in the space, while the output features are dependent on the
-    number of actions in the space. hidden_dims is configurable and defaults to 128.
+    number of actions in the space. hidden_dims is configurable and defaults to 128. If
+    dropout is non-zero, dropout layers are added after each ReLU. negative_slope affects
+    the negative slope of the LeakyReLU activations (0 implies regular ReLU).
     """
-    def __init__(self, input_dims: int, output_dims, hidden_dims: int = 128):
+    def __init__(self, input_dims: int, output_dims, hidden_dims: int = 128,
+                 dropout: float = 0, negative_slope: float = 0):
         super(PolicyNetwork, self).__init__()
 
         self.output_dims = output_dims
 
+        # create the layers, with optional dropouts
+        layers =  [nn.Linear(input_dims, hidden_dims), nn.LeakyReLU(negative_slope)]
+        if dropout:
+            layers.append(nn.Dropout(dropout))
+
+        layers.extend([nn.Linear(hidden_dims, hidden_dims), nn.LeakyReLU(negative_slope)])
+        if dropout:
+            layers.append(nn.Dropout(dropout))
+
+        layers.append(nn.Linear(hidden_dims, output_dims))
+
         # create the simple fully connected net
-        self.net = nn.Sequential(
-            nn.Linear(input_dims, hidden_dims),
-            nn.ReLU(),
-            nn.Linear(hidden_dims, hidden_dims),
-            nn.ReLU(),
-            nn.Linear(hidden_dims, output_dims)
-        )
+        self.net = nn.Sequential(*layers)
 
     def forward(self: nn.Module, state: np.ndarray) -> torch.Tensor:
         return F.softmax(self.net(state), dim=1)
@@ -62,6 +70,14 @@ class PolicyNetwork(nn.Module):
         log_prob = torch.log(probs.squeeze(0)[sampled_action])
 
         return sampled_action, log_prob
+
+
+def get_device():
+
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    logger.info(f'Using {device} device...')
+
+    return device
 
 
 # TODO: Add unit tests for this!
@@ -169,13 +185,15 @@ def run(**kwargs: Dict) -> None:
 
     env_spec_id = kwargs['env_spec_id']
     inner_dims = kwargs['inner_dims']
+    dropout = kwargs['dropout']
+    negative_slope = kwargs['negative_slope']
     num_episodes = kwargs['num_episodes']
     lr = kwargs['lr']
     gamma = kwargs['gamma']
     max_lookahead = kwargs['max_lookahead']
     num_videos = kwargs['num_videos']
 
-    tb_id = f"tb/{env_spec_id}_{num_episodes}_{inner_dims}_{lr}_{gamma}_{max_lookahead}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    tb_id = f"tb/{env_spec_id}_{num_episodes}_{inner_dims}_{lr}_{gamma}_{max_lookahead}_{dropout}_{negative_slope}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     tb_logger = SummaryWriter(tb_id, flush_secs=5)
 
     # intialize the environment that we are using
@@ -189,7 +207,9 @@ def run(**kwargs: Dict) -> None:
     n_states = len(state)
 
     # init the pytorch pieces
-    policy_net = PolicyNetwork(n_states, n_actions, inner_dims)
+    policy_net = PolicyNetwork(n_states, n_actions, inner_dims, dropout, negative_slope)
+    policy_net.to(get_device())
+
     optimizer = Adam(policy_net.parameters(), lr=lr)
 
     num_steps = []
@@ -255,7 +275,7 @@ def run(**kwargs: Dict) -> None:
 
 
     # plot the step data so we can see how we did
-    plot_data(num_steps, avg_steps, episode, env, rewards_sum)
+    plot_data(num_steps, avg_steps, episode, env, rewards_sum[-1])
 
 
 def parse_args() -> argparse.Namespace:
@@ -271,7 +291,7 @@ def main():
 
     logger.info('Starting...')
 
-    # this just a place holder for if/when we need cl args
+    # this just a place holder for if/when we need cli args
     _ = parse_args()
 
     # run each given environment

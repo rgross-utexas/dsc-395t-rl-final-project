@@ -1,0 +1,9 @@
+dynaconf
+gymnasium
+gymnasium[box2d]
+matplotlib
+opencv-python-headless
+pillow
+torch
+tensorboard
+tqdm
