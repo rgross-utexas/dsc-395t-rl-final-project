@@ -1,6 +1,7 @@
 """
 TODO: Add better documentation for this file and algorithm!
-REINFORCE (or Monte Carlo Policy Gradient) is a policy-gradient Reinforcement Learning algorithm.
+REINFORCE (or Monte Carlo Policy Gradient) is a model-free, policy-gradient Reinforcement
+Learning algorithm.
 """
 import argparse
 from datetime import datetime
