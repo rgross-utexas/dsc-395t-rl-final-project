@@ -1,5 +1,6 @@
 """
-REINFORCE is a Monte Carlo-based policy-gradient Reinforcement Learning algorithm.
+TODO: Add better documentation for this file and algorithm!
+REINFORCE (or Monte Carlo Policy Gradient) is a policy-gradient Reinforcement Learning algorithm.
 """
 import argparse
 from datetime import datetime
@@ -72,14 +73,6 @@ class PolicyNetwork(nn.Module):
         return sampled_action, log_prob
 
 
-def get_device():
-
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    logger.info(f'Using {device} device...')
-
-    return device
-
-
 # TODO: Add unit tests for this!
 def discount_rewards(rewards: List[float], gamma: float, max_lookahead: int) -> torch.Tensor:
 
@@ -91,7 +84,7 @@ def discount_rewards(rewards: List[float], gamma: float, max_lookahead: int) -> 
 
         g = 0
 
-        # only lookahead max_lookahead steps
+        # only lookahead at most max_lookahead steps
         t_lookahead = min(t + max_lookahead, len(rewards) - 1)
 
         # multiply the rewards by the decay and sum to get g
@@ -105,7 +98,7 @@ def discount_rewards(rewards: List[float], gamma: float, max_lookahead: int) -> 
     return torch.tensor(discounted_rewards)
 
 
-def update_policy(optimizer: Optimizer, rewards: List, log_probs: List[torch.Tensor],
+def update_policy(optimizer: Optimizer, rewards: List[float], log_probs: List[torch.Tensor],
                   gamma: float = .99, max_lookahead: int = 100) -> None:
     """
     Updates the policy net.
@@ -114,7 +107,7 @@ def update_policy(optimizer: Optimizer, rewards: List, log_probs: List[torch.Ten
     # zero out the gradient
     optimizer.zero_grad()
 
-    # discount the rewards
+    # discount the rewards based on gamma, limiting them to max_lookahead steps
     discounted_rewards = discount_rewards(rewards, gamma, max_lookahead)
 
     # calculate the gradients
@@ -123,6 +116,8 @@ def update_policy(optimizer: Optimizer, rewards: List, log_probs: List[torch.Ten
         policy_gradients.append(-log_prob * g)
 
     policy_gradient = torch.stack(policy_gradients).sum()
+
+    # back propogate the policy gradient
     policy_gradient.backward()
 
     # take a step with the optimizer
@@ -130,6 +125,10 @@ def update_policy(optimizer: Optimizer, rewards: List, log_probs: List[torch.Ten
 
 
 def generate_video(env_spec_id: str, policy_net: PolicyNetwork, episode: int) -> None:
+    """
+    Generate an mp4 video for the given policy, and write it to file. This is a fun way
+    to see how the algoirthm is doing.
+    """
 
     # render episodes based on the trained policy
     env = gym.make(env_spec_id, render_mode='rgb_array')
@@ -168,9 +167,13 @@ def generate_video(env_spec_id: str, policy_net: PolicyNetwork, episode: int) ->
 
     out.release()
 
-# TODO: Refactor this to make it useful or remove it
+# TODO: Refactor this to make it useful or just remove it
 def plot_data(num_steps: List[int], avg_steps: List[float],
               episode: int, env: Env, total_reward: float) -> None:
+    """
+    Create a plot of the number of steps and average number of steps per episode,
+    and write it to file.
+    """
 
     # plot simple plot of the step data and save to file
     plt.plot(num_steps)
@@ -183,6 +186,7 @@ def plot_data(num_steps: List[int], avg_steps: List[float],
 
 def run(**kwargs: Dict) -> None:
 
+    # grab all the paremeters
     env_spec_id = kwargs['env_spec_id']
     inner_dims = kwargs['inner_dims']
     dropout = kwargs['dropout']
@@ -193,10 +197,11 @@ def run(**kwargs: Dict) -> None:
     max_lookahead = kwargs['max_lookahead']
     num_videos = kwargs['num_videos']
 
+    # initialize tensorboard
     tb_id = f"tb/{env_spec_id}_{num_episodes}_{inner_dims}_{lr}_{gamma}_{max_lookahead}_{dropout}_{negative_slope}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     tb_logger = SummaryWriter(tb_id, flush_secs=5)
 
-    # intialize the environment that we are using
+    # intialize the gym environment that we are using
     env = gym.make(env_spec_id)
 
     # get number of actions from gym action space
@@ -208,18 +213,17 @@ def run(**kwargs: Dict) -> None:
 
     # init the pytorch pieces
     policy_net = PolicyNetwork(n_states, n_actions, inner_dims, dropout, negative_slope)
-    policy_net.to(get_device())
-
     optimizer = Adam(policy_net.parameters(), lr=lr)
 
     num_steps = []
     avg_steps = []
     rewards_sum = []
 
+    # keep an absolute step counter for tensorboard metrics
     counter = 0
     for episode in tqdm(range(num_episodes), unit='episodes'):
 
-        # Initialize the environment and get it's state
+        # init the environment and get it's current state
         state, _ = env.reset()
 
         # init the data lists
@@ -228,12 +232,14 @@ def run(**kwargs: Dict) -> None:
 
         for step in itertools.count():
 
-            # get an action based on the current policy
+            # get an action and action log probability based on the current policy
             action, log_prob = policy_net.get_action_log_prob(state)
-            log_probs.append(log_prob)
 
             # take a step with the action
             new_state, reward, terminated, truncated, _ = env.step(action)
+
+            # save the values for updating the policy
+            log_probs.append(log_prob)
             rewards.append(reward)
 
             # if we have completed the run (terminated) or gone too many steps (truncated),
@@ -243,12 +249,12 @@ def run(**kwargs: Dict) -> None:
                 # update the policy based on the rewards and log probabilities of the actions
                 update_policy(optimizer, rewards, log_probs, gamma, max_lookahead)
 
-                # record the step and reward data
+                # record the step and reward data for metric reporting
                 num_steps.append(step)
                 avg_steps.append(np.mean(num_steps[-ROLLING_AVERAGE_LENGTH:]))
                 rewards_sum.append(np.sum(rewards))
 
-                # episode indexed metrics
+                # episode indexed tensorboard metrics
                 tb_logger.add_scalar('e_rewards_sum', rewards_sum[-1], global_step=episode)
                 tb_logger.add_scalar('e_num_steps', num_steps[-1], global_step=episode)
 
@@ -263,7 +269,7 @@ def run(**kwargs: Dict) -> None:
 
                 break
 
-            # counter indexed metrics
+            # counter indexed tensorboard metrics
             tb_logger.add_scalar('log_prob', log_prob, global_step=counter)
             tb_logger.add_scalar('prob', torch.exp(log_prob), global_step=counter)
             tb_logger.add_scalar('reward', reward, global_step=counter)
@@ -272,7 +278,6 @@ def run(**kwargs: Dict) -> None:
 
             # update the state
             state = new_state
-
 
     # plot the step data so we can see how we did
     plot_data(num_steps, avg_steps, episode, env, rewards_sum[-1])

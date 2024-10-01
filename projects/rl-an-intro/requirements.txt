@@ -7,3 +7,4 @@ pillow
 torch
 tensorboard
 tqdm
+# You may need this! pip install --force-reinstall -v "numpy==1.25.2"
